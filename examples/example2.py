@@ -2,7 +2,7 @@ import torch
 import copy
 from torch import nn
 from src import softDEEPR, convert_to_deep_rewireable, convert_from_deep_rewireable
-from src.utils import measure_sparsity
+from src.utils import measure_sparsity, progressBar
 
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
@@ -74,11 +74,13 @@ if __name__ == '__main__':
 	accuracies = []
 	accuracies2 = []
 
+	pb = progressBar(max_value=len(training_data), length=30)
+
 	for batch, (X, y) in enumerate(train_dataloader):
-		
+		pb.prnt()
+		pb.increment()
 		if batch % 10 == 0:
 			for _, (Xv, yv) in enumerate(val_dataloader):
-
 				with torch.no_grad():
 					# softDEEPR
 					pred = model(Xv)
@@ -87,8 +89,6 @@ if __name__ == '__main__':
 					# SGD
 					pred2 = model2(Xv)
 					accuracies2.append((pred2.argmax(dim=1) == yv).float().mean().item())
-				
-
 		# softDEEPR
 		pred = model(X)
 		loss = criterium(pred, y)
@@ -106,10 +106,12 @@ if __name__ == '__main__':
 		losses2.append(loss2.item())
 			
 
+	# convert it to "standard" FCN again, now hopefully sparse
 	convert_from_deep_rewireable(model)
 	final_sparsity = measure_sparsity(model.parameters())
 	final_sparsity2 = measure_sparsity(model2.parameters(), threshold=threshold)
 
+	# check if still working after reconversion
 	pred = model(X)
 	loss = criterium(pred, y).detach()
 	for _, (Xv, yv) in enumerate(val_dataloader):
