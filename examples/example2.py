@@ -10,7 +10,8 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
 """
-In this experiment we will try to use a simple FCN and try it on MNIST instead of a fixed vector
+In this experiment we will try to use a simple FCN and try it on MNIST instead of a fixed vector.
+We let it run only for one epoch (one time over training data) but plot after each batch.
 """
 
 class someFCN(nn.Module):
@@ -73,9 +74,9 @@ if __name__ == '__main__':
 	accuracies = []
 	accuracies2 = []
 
-	for epoch, (X, y) in enumerate(train_dataloader):
+	for batch, (X, y) in enumerate(train_dataloader):
 		
-		if epoch % 10 == 0:
+		if batch % 10 == 0:
 			for _, (Xv, yv) in enumerate(val_dataloader):
 
 				with torch.no_grad():
@@ -116,27 +117,26 @@ if __name__ == '__main__':
 			pred = model(Xv)
 			accuracy = (pred.argmax(dim=1) == yv).float().mean().item()
 		
+
+	fig, ax = plt.subplots(1, 2)
 			
-	plt.plot(losses)
-	plt.plot(losses2)
-	plt.plot([loss for _ in range(len(losses))], 'r--')
-	plt.xlabel("epoch")
-	plt.ylabel("MSE loss")
-	plt.legend(["softDEEPR", "SGD", "test of softDEEPR after converting back"])
-	plt.title(f"Initial sparsity (threshold {threshold}): {init_sparsity:.2f}\n"+
+	line1, = ax[0].plot(losses)
+	line2, = ax[0].plot(losses2)
+	line3, = ax[0].plot([loss for _ in range(len(losses))], 'r--')
+	ax[0].set_xlabel("batch")
+	ax[0].set_ylabel("MSE loss (training)")
+
+	ax[1].plot(accuracies)
+	ax[1].plot(accuracies2)
+	ax[1].plot([accuracy for _ in range(len(accuracies))], 'r--')
+	ax[1].set_xlabel("batch")
+	ax[1].set_ylabel("accuracy (validation)")
+	
+	lines = [line1, line2, line3]
+	fig.legend(lines, ["softDEEPR", "SGD", "test of softDEEPR\nafter converting back"], loc='center right')
+	fig.suptitle(f"Initial sparsity (threshold {threshold}): {init_sparsity:.2f}\n"+
 			  f"Final sparsity softDEEPR (real zeros): {final_sparsity:.2f}\n"+
 			  f"Final sparsity SGD (threshold {threshold}): {final_sparsity2:.2f}\n")
-	plt.show()
-
-
-	plt.plot(accuracies)
-	plt.plot(accuracies2)
-	plt.plot([accuracy for _ in range(len(accuracies))], 'r--')
-	plt.xlabel("epoch")
-	plt.ylabel("accuracy")
-	plt.legend(["softDEEPR", "SGD", "test of softDEEPR after converting back"])
-	plt.title(f"Initial sparsity (threshold {threshold}): {init_sparsity:.2f}\n"+
-			  f"Final sparsity softDEEPR (real zeros): {final_sparsity:.2f}\n"+
-			  f"Final sparsity SGD (threshold {threshold}): {final_sparsity2:.2f}\n")
+	plt.subplots_adjust(right=0.85)
 	plt.show()
 
