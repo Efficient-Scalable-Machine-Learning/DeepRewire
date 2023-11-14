@@ -3,7 +3,7 @@ import copy
 import random
 from torch import nn
 from src import SoftDEEPR, convert_to_deep_rewireable, convert_from_deep_rewireable
-from src.utils import measure_sparsity, progressBar
+from src.utils import measure_sparsity, ProgressBar
 
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
@@ -110,7 +110,7 @@ if __name__ == '__main__':
 	accuracies = []
 	accuracies2 = []
 
-	pb = progressBar(max_value=100, length=30)
+	pb = ProgressBar(max_value=100, length=30)
 
 	for epoch in range(100):
 
