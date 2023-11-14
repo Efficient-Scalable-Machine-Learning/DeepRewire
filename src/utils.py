@@ -28,7 +28,7 @@ class progressBar:
 			self.counter = self.max_value
 
 	def prnt(self):
-		return print(' Progress: ['+('-'*int(self.counter/self.length)).ljust(self.length, ' ')+']', end = '\r')
+		return print(f'  Progress: ['+('-'*int(self.counter*self.length/self.max_value)).ljust(self.length, ' ')+']', end = '\r')
 
 	def reset(self):
 		self.counter = 0
