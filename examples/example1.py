@@ -1,7 +1,7 @@
 import torch
 import copy
 from torch import nn
-from src import DEEPR, softDEEPR, convert_to_deep_rewireable, convert_from_deep_rewireable
+from src import DEEPR, SoftDEEPR, convert_to_deep_rewireable, convert_from_deep_rewireable
 from src.utils import measure_sparsity
 import matplotlib.pyplot as plt
 
@@ -38,7 +38,7 @@ if __name__ == '__main__':
 	threshold = 1e-3
 	init_sparsity = measure_sparsity(model.parameters(), threshold=threshold)
 	convert_to_deep_rewireable(model)
-	optimizer = softDEEPR(model.parameters(), lr=0.05, l1=0.005)
+	optimizer = SoftDEEPR(model.parameters(), lr=0.05, l1=0.005)
 	optimizer2 = torch.optim.SGD(model2.parameters(), lr=0.05)
 	criterium = nn.MSELoss()
 
@@ -51,7 +51,7 @@ if __name__ == '__main__':
 
 	for epoch in range(100):
 
-		# softDEEPR
+		# SoftDEEPR
 		pred = model(X)
 		loss = criterium(pred, y)
 		optimizer.zero_grad()
@@ -78,8 +78,8 @@ if __name__ == '__main__':
 	plt.plot([loss for l in range(len(losses))], 'r--')
 	plt.xlabel("epoch")
 	plt.ylabel("MSE loss")
-	plt.legend(["softDEEPR", "SGD", "test of softDEEPR after converting back"])
+	plt.legend(["SoftDEEPR", "SGD", "test of SoftDEEPR after converting back"])
 	plt.title(f"Initial sparsity (threshold {threshold}): {init_sparsity:.2f}\n"+
-			  f"Final sparsity softDEEPR (real zeros): {final_sparsity:.2f}\n"+
+			  f"Final sparsity SoftDEEPR (real zeros): {final_sparsity:.2f}\n"+
 			  f"Final sparsity SGD (threshold {threshold}): {final_sparsity2:.2f}\n")
 	plt.show()

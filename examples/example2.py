@@ -1,7 +1,7 @@
 import torch
 import copy
 from torch import nn
-from src import softDEEPR, convert_to_deep_rewireable, convert_from_deep_rewireable
+from src import SoftDEEPR, convert_to_deep_rewireable, convert_from_deep_rewireable
 from src.utils import measure_sparsity, progressBar
 
 from torchvision import datasets, transforms
@@ -64,7 +64,7 @@ if __name__ == '__main__':
 	eta = 0.05
 	alpha = 1e-5
 	T = eta*alpha**2/18
-	optimizer = softDEEPR(model.parameters(), lr=eta, l1=alpha, temp=T)
+	optimizer = SoftDEEPR(model.parameters(), lr=eta, l1=alpha, temp=T)
 	optimizer2 = torch.optim.SGD(model2.parameters(), lr=eta)
 	criterium = nn.CrossEntropyLoss()
 
@@ -82,14 +82,14 @@ if __name__ == '__main__':
 		if batch % 10 == 0:
 			for _, (Xv, yv) in enumerate(val_dataloader):
 				with torch.no_grad():
-					# softDEEPR
+					# SoftDEEPR
 					pred = model(Xv)
 					accuracies.append((pred.argmax(dim=1) == yv).float().mean().item())
 		
 					# SGD
 					pred2 = model2(Xv)
 					accuracies2.append((pred2.argmax(dim=1) == yv).float().mean().item())
-		# softDEEPR
+		# SoftDEEPR
 		pred = model(X)
 		loss = criterium(pred, y)
 		optimizer.zero_grad()
@@ -135,9 +135,9 @@ if __name__ == '__main__':
 	ax[1].set_ylabel("accuracy (validation)")
 	
 	lines = [line1, line2, line3]
-	fig.legend(lines, ["softDEEPR", "SGD", "test of softDEEPR\nafter converting back"], loc='center right')
+	fig.legend(lines, ["SoftDEEPR", "SGD", "test of SoftDEEPR\nafter converting back"], loc='center right')
 	fig.suptitle(f"Initial sparsity (threshold {threshold}): {init_sparsity:.2f}\n"+
-			  f"Final sparsity softDEEPR (real zeros): {final_sparsity:.2f}\n"+
+			  f"Final sparsity SoftDEEPR (real zeros): {final_sparsity:.2f}\n"+
 			  f"Final sparsity SGD (threshold {threshold}): {final_sparsity2:.2f}\n")
 	plt.subplots_adjust(right=0.85)
 	plt.show()
