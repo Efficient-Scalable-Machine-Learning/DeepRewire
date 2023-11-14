@@ -6,7 +6,7 @@ from src.utils import measure_sparsity
 import matplotlib.pyplot as plt
 
 """
-This is just an example to see if everything is basically working (converson, reconversion, optimization).
+This is just an example to see if everything is basically working but for DEEPR (converson, reconversion, optimization).
 We fit a fixed input tensor X to a fixed target tensor y over 100 epochs, we plot the loss as well as the inital and final sparsity of the model.
 Additionally we do SGD on a copy of the network as a baseline and also calculate that sparsity.
 """

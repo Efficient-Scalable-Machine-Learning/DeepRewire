@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 """
 In this experiment we will try to use a simple FCN and try it on MNIST instead of a fixed vector.
-We let it run only for one epoch (one time over training data) but plot after each batch.
+We let it run for 100 epochs.
 """
 
 class someFCN(nn.Module):

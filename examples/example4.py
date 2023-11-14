@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 """
 In this experiment we will try to use a simple CNN and try it on CIFAR10.
-We let it run only for one epoch (one time over training data) but plot after each batch.
+We let it run only for 100 epochs.
 """
 
 class someCNN(nn.Module):

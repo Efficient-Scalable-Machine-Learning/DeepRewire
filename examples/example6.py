@@ -11,8 +11,7 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
 """
-In this experiment we will try to use a simple FCN and try it on MNIST instead of a fixed vector.
-We let it run only for one epoch (one time over training data) but plot after each batch.
+In this experiment we will try to use a simple FCN and try it on MNIST but with changing the labels every epoch.
 """
 
 class someFCN(nn.Module):
