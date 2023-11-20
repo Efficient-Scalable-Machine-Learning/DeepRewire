@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 """
 This is just an example to see if everything is basically working (converson, reconversion, optimization).
-We fit a fixed input tensor X to a fixed target tensor y over 100 epochs, we plot the loss as well as the inital and final sparsity of the model.
+We fit a fixed input tensor X to a fixed target tensor y over 100 iterations, we plot the loss as well as the inital and final sparsity of the model.
 Additionally we do SGD on a copy of the network as a baseline and also calculate that sparsity.
 """
 
@@ -76,7 +76,7 @@ if __name__ == '__main__':
 	plt.plot(losses)
 	plt.plot(losses2)
 	plt.plot([loss for l in range(len(losses))], 'r--')
-	plt.xlabel("epoch")
+	plt.xlabel("iteration")
 	plt.ylabel("MSE loss")
 	plt.legend(["SoftDEEPR", "SGD", "test of SoftDEEPR after converting back"])
 	plt.title(f"Initial sparsity (threshold {threshold}): {init_sparsity:.2f}\n"+
