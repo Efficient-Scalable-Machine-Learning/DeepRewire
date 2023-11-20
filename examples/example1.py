@@ -37,7 +37,7 @@ if __name__ == '__main__':
 
 	threshold = 1e-3
 	init_sparsity = measure_sparsity(model.parameters(), threshold=threshold)
-	convert_to_deep_rewireable(model)
+	convert_to_deep_rewireable(model, handle_biases='second_bias')
 	optimizer = SoftDEEPR(model.parameters(), lr=0.05, l1=0.005)
 	optimizer2 = torch.optim.SGD(model2.parameters(), lr=0.05)
 	criterium = nn.MSELoss()

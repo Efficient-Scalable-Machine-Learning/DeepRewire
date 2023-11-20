@@ -33,54 +33,112 @@ class NonTrainableParameter(nn.Parameter):
         pass
 
 
-def add_signs(module: nn.Module):
-    """
-    add the sign parameters to a standard network
-    """
-    # for each parameter of any submodule make a tensor filled with
-    # {-1 or 1} and register it as an non-optimizable parameter
-    params_to_register = []
-    for name, param in module.named_parameters():
-        if '.' not in name and param.requires_grad:
-            signs = torch.randint(0, 2, size=param.size(), dtype=param.dtype) * 2 - 1
-            params_to_register.append((name + '_signs', NonTrainableParameter(signs)))
-
-    for name, param in params_to_register:
-        module.register_parameter(name, param)
-
-    for name, submodule in module.named_children():
-        add_signs(submodule)
-
-def forward_to_rewireable(module: nn.Module):
+def convert_to_deep_rewireable(module: nn.Module, handle_biases="as_connections"):
     """
     change the forward pass of a standard network to the rewire-forward pass
     """
+
+    # Linear
     if isinstance(module, nn.Linear):
-        def linear_forward(x, mod=module):
-            return F.linear(x, F.relu(mod.weight)*mod.weight_signs, F.relu(mod.bias)*mod.bias_signs)
+        if handle_biases == 'ignore':
+            signs = torch.randint(0, 2, size=module.weight.size(), dtype=module.weight.dtype) * 2 - 1
+            module.register_parameter('weight_signs', NonTrainableParameter(signs))
+            module.bias = -float('inf')*nn.Parameter(torch.ones_like(module.bias))
+            def linear_forward(x, mod=module):
+                return F.linear(x, F.relu(mod.weight)*mod.weight_signs, 0)
+
+        elif handle_biases == 'as_connections':
+            weight_signs = torch.randint(0, 2, size=module.weight.size(), dtype=module.weight.dtype) * 2 - 1
+            bias_signs = torch.randint(0, 2, size=module.bias.size(), dtype=module.bias.dtype) * 2 - 1
+            module.register_parameter('weight_signs', NonTrainableParameter(weight_signs))
+            module.register_parameter('bias_signs', NonTrainableParameter(bias_signs))
+            def linear_forward(x, mod=module):
+                return F.linear(x, F.relu(mod.weight)*mod.weight_signs, F.relu(mod.bias)*mod.bias_signs)
+
+        elif handle_biases == 'second_bias':
+            weight_signs = torch.randint(0, 2, size=module.weight.size(), dtype=module.weight.dtype) * 2 - 1
+            bias_negative = -module.bias.detach().clone()
+            module.register_parameter('weight_signs', NonTrainableParameter(weight_signs))
+            module.register_parameter('bias_negative', NonTrainableParameter(bias_negative))
+            mask =  module.bias >= 0
+            module.bias[mask] *= 2
+            module.bias_negative[~mask] *= 2
+            def linear_forward(x, mod=module):
+                return F.linear(x, F.relu(mod.weight)*mod.weight_signs, F.relu(mod.bias)-F.relu(mod.bias_negative))
+
+        else:
+            raise ValueError(f"invalid handle_biases value: {handle_biases}")
+        
         module.forward = linear_forward
 
+    # Conv2d (This is way more than nessecary. Maybe fix using partials)
     elif isinstance(module, nn.Conv2d):
-        def conv2d_forward(x, mod=module):
-            if mod.padding_mode != 'zeros':
-                return F.conv2d(F.pad(x, mod._reversed_padding_repeated_twice,
-                                      mode=mod.padding_mode),
-                            F.relu(mod.weight)*mod.weight_signs,
-                            F.relu(mod.bias)*mod.bias_signs, mod.stride, _pair(0),
-                                   mod.dilation, mod.groups)
-            return F.conv2d(x, F.relu(mod.weight)*mod.weight_signs,
-                                   F.relu(mod.bias)*mod.bias_signs, mod.stride,
-                                   mod.padding, mod.dilation, mod.groups)
+
+        if handle_biases == 'ignore':
+            signs = torch.randint(0, 2, size=module.weight.size(), dtype=module.weight.dtype) * 2 - 1
+            module.register_parameter('weight_signs', NonTrainableParameter(signs))
+            module.bias = -float('inf')*nn.Parameter(torch.ones_like(module.bias))
+            def conv2d_forward(x, mod=module):
+                if mod.padding_mode != 'zeros':
+                    return F.conv2d(F.pad(x, mod._reversed_padding_repeated_twice,
+                                          mode=mod.padding_mode),
+                                F.relu(mod.weight)*mod.weight_signs,
+                                0, mod.stride, _pair(0),
+                                       mod.dilation, mod.groups)
+                return F.conv2d(x, F.relu(mod.weight)*mod.weight_signs,
+                                       0, mod.stride,
+                                       mod.padding, mod.dilation, mod.groups)
+
+
+        elif handle_biases == 'as_connections':
+            weight_signs = torch.randint(0, 2, size=module.weight.size(), dtype=module.weight.dtype) * 2 - 1
+            bias_signs = torch.randint(0, 2, size=module.bias.size(), dtype=module.bias.dtype) * 2 - 1
+            module.register_parameter('weight_signs', NonTrainableParameter(weight_signs))
+            module.register_parameter('bias_signs', NonTrainableParameter(bias_signs))
+            def conv2d_forward(x, mod=module):
+                if mod.padding_mode != 'zeros':
+                    return F.conv2d(F.pad(x, mod._reversed_padding_repeated_twice,
+                                          mode=mod.padding_mode),
+                                F.relu(mod.weight)*mod.weight_signs,
+                                F.relu(mod.bias)*mod.bias_signs, mod.stride, _pair(0),
+                                       mod.dilation, mod.groups)
+                return F.conv2d(x, F.relu(mod.weight)*mod.weight_signs,
+                                       F.relu(mod.bias)*mod.bias_signs, mod.stride,
+                                       mod.padding, mod.dilation, mod.groups)
+
+
+        elif handle_biases == 'second_bias':
+            weight_signs = torch.randint(0, 2, size=module.weight.size(), dtype=module.weight.dtype) * 2 - 1
+            bias_negative = -module.bias.detach().clone()
+            module.register_parameter('weight_signs', NonTrainableParameter(weight_signs))
+            module.register_parameter('bias_negative', NonTrainableParameter(bias_negative))
+            mask =  module.bias >= 0
+            module.bias[mask] *= 2
+            module.bias_negative[~mask] *= 2
+            def conv2d_forward(x, mod=module):
+                if mod.padding_mode != 'zeros':
+                    return F.conv2d(F.pad(x, mod._reversed_padding_repeated_twice,
+                                          mode=mod.padding_mode),
+                                F.relu(mod.weight)*mod.weight_signs,
+                                F.relu(mod.bias)-F.relu(mod.bias_negative), mod.stride, _pair(0),
+                                       mod.dilation, mod.groups)
+                return F.conv2d(x, F.relu(mod.weight)*mod.weight_signs,
+                                       F.relu(mod.bias)-F.relu(mod.bias_negative), mod.stride,
+                                       mod.padding, mod.dilation, mod.groups)
+       
         module.forward = conv2d_forward
 
+
     for _, submodule in module.named_children():
-        forward_to_rewireable(submodule)
+        convert_to_deep_rewireable(submodule)
 
 
-def merge_sign_and_weight(module: nn.Module):
+
+def merge_back(module: nn.Module):
     """
     evil code ahead
     """
+    # merge signs
     parameters_to_merge = [(n[:-6], n) for n in module.state_dict() if n.endswith('_signs')]
     for p_name, s_name in parameters_to_merge:
         p_hierarchy = p_name.split('.')
@@ -99,6 +157,27 @@ def merge_sign_and_weight(module: nn.Module):
         if hasattr(obj, p_hierarchy[-1]):
             value = getattr(obj, p_hierarchy[-1])
             setattr(obj, p_hierarchy[-1], torch.nn.Parameter(value.clamp(min=0)*sign))
+
+    # merge biases
+    parameters_to_merge = [(n[:-9], n) for n in module.state_dict() if n.endswith('_negative')]
+    for p_name, s_name in parameters_to_merge:
+        p_hierarchy = p_name.split('.')
+        n_hierarchy = s_name.split('.')
+        obj = module
+        sign, value = 0, 0
+        for n in n_hierarchy[:-1]:
+            obj = getattr(obj, n)
+        if hasattr(obj, n_hierarchy[-1]):
+            neg = getattr(obj, n_hierarchy[-1])
+            delattr(obj, n_hierarchy[-1])
+
+        obj = module
+        for n in p_hierarchy[:-1]:
+            obj = getattr(obj, n)
+        if hasattr(obj, p_hierarchy[-1]):
+            value = getattr(obj, p_hierarchy[-1])
+            setattr(obj, p_hierarchy[-1], torch.nn.Parameter(value.clamp(min=0)-neg.clamp(min=0)))
+
 
 def forward_to_standard(module: nn.Module):
     """
@@ -123,20 +202,13 @@ def forward_to_standard(module: nn.Module):
         forward_to_standard(submodule)
 
 
-
-def convert_to_deep_rewireable(module: nn.Module):
-    """
-    converts a standard network to the structure of a rewireable network
-    """
-    add_signs(module)
-    forward_to_rewireable(module)
-
 def convert_from_deep_rewireable(module: nn.Module):
     """
     converts a rewireable network to the structure of a standard network
     """
-    merge_sign_and_weight(module)
+    merge_back(module)
     forward_to_standard(module)
+
 
 if __name__ == '__main__':
     pass
