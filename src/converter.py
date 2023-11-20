@@ -43,9 +43,13 @@ def convert_to_deep_rewireable(module: nn.Module, handle_biases="as_connections"
         if handle_biases == 'ignore':
             signs = torch.randint(0, 2, size=module.weight.size(), dtype=module.weight.dtype) * 2 - 1
             module.register_parameter('weight_signs', NonTrainableParameter(signs))
-            module.bias = -float('inf')*nn.Parameter(torch.ones_like(module.bias))
+            module.bias = nn.Parameter(-float('inf')*torch.ones_like(module.bias))
+            # dummy signs for merging later
+            signs = torch.ones_like(module.bias)
+            module.register_parameter('bias_signs', NonTrainableParameter(signs))
+            zero = torch.zeros_like(module.bias) 
             def linear_forward(x, mod=module):
-                return F.linear(x, F.relu(mod.weight)*mod.weight_signs, 0)
+                return F.linear(x, F.relu(mod.weight)*mod.weight_signs, zero)
 
         elif handle_biases == 'as_connections':
             weight_signs = torch.randint(0, 2, size=module.weight.size(), dtype=module.weight.dtype) * 2 - 1
@@ -59,10 +63,11 @@ def convert_to_deep_rewireable(module: nn.Module, handle_biases="as_connections"
             weight_signs = torch.randint(0, 2, size=module.weight.size(), dtype=module.weight.dtype) * 2 - 1
             bias_negative = -module.bias.detach().clone()
             module.register_parameter('weight_signs', NonTrainableParameter(weight_signs))
-            module.register_parameter('bias_negative', NonTrainableParameter(bias_negative))
-            mask =  module.bias >= 0
-            module.bias[mask] *= 2
-            module.bias_negative[~mask] *= 2
+            module.register_parameter('bias_negative', nn.Parameter(bias_negative))
+            with torch.no_grad():
+                mask =  module.bias >= 0
+                module.bias[mask] *= 2
+                module.bias_negative[~mask] *= 2
             def linear_forward(x, mod=module):
                 return F.linear(x, F.relu(mod.weight)*mod.weight_signs, F.relu(mod.bias)-F.relu(mod.bias_negative))
 
@@ -77,16 +82,21 @@ def convert_to_deep_rewireable(module: nn.Module, handle_biases="as_connections"
         if handle_biases == 'ignore':
             signs = torch.randint(0, 2, size=module.weight.size(), dtype=module.weight.dtype) * 2 - 1
             module.register_parameter('weight_signs', NonTrainableParameter(signs))
-            module.bias = -float('inf')*nn.Parameter(torch.ones_like(module.bias))
+            module.bias = nn.Parameter(-float('inf')*torch.ones_like(module.bias))
+            # dummy signs for merging later
+            signs = torch.ones_like(module.bias)
+            module.register_parameter('bias_signs', NonTrainableParameter(signs))
+
+            zero = torch.ones_like(module.bias) 
             def conv2d_forward(x, mod=module):
                 if mod.padding_mode != 'zeros':
                     return F.conv2d(F.pad(x, mod._reversed_padding_repeated_twice,
                                           mode=mod.padding_mode),
                                 F.relu(mod.weight)*mod.weight_signs,
-                                0, mod.stride, _pair(0),
+                                zero, mod.stride, _pair(0),
                                        mod.dilation, mod.groups)
                 return F.conv2d(x, F.relu(mod.weight)*mod.weight_signs,
-                                       0, mod.stride,
+                                       zero, mod.stride,
                                        mod.padding, mod.dilation, mod.groups)
 
 
@@ -111,10 +121,11 @@ def convert_to_deep_rewireable(module: nn.Module, handle_biases="as_connections"
             weight_signs = torch.randint(0, 2, size=module.weight.size(), dtype=module.weight.dtype) * 2 - 1
             bias_negative = -module.bias.detach().clone()
             module.register_parameter('weight_signs', NonTrainableParameter(weight_signs))
-            module.register_parameter('bias_negative', NonTrainableParameter(bias_negative))
-            mask =  module.bias >= 0
-            module.bias[mask] *= 2
-            module.bias_negative[~mask] *= 2
+            module.register_parameter('bias_negative', nn.Parameter(bias_negative))
+            with torch.no_grad():
+                mask =  module.bias >= 0
+                module.bias[mask] *= 2
+                module.bias_negative[~mask] *= 2
             def conv2d_forward(x, mod=module):
                 if mod.padding_mode != 'zeros':
                     return F.conv2d(F.pad(x, mod._reversed_padding_repeated_twice,
@@ -130,7 +141,7 @@ def convert_to_deep_rewireable(module: nn.Module, handle_biases="as_connections"
 
 
     for _, submodule in module.named_children():
-        convert_to_deep_rewireable(submodule)
+        convert_to_deep_rewireable(submodule, handle_biases=handle_biases)
 
 
 
