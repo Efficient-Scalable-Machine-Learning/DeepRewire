@@ -99,7 +99,6 @@ def convert_to_deep_rewireable(module: nn.Module, handle_biases="as_connections"
                                        zero, mod.stride,
                                        mod.padding, mod.dilation, mod.groups)
 
-
         elif handle_biases == 'as_connections':
             weight_signs = torch.randint(0, 2, size=module.weight.size(), dtype=module.weight.dtype) * 2 - 1
             bias_signs = torch.randint(0, 2, size=module.bias.size(), dtype=module.bias.dtype) * 2 - 1
@@ -142,7 +141,6 @@ def convert_to_deep_rewireable(module: nn.Module, handle_biases="as_connections"
 
     for _, submodule in module.named_children():
         convert_to_deep_rewireable(submodule, handle_biases=handle_biases)
-
 
 
 def merge_back(module: nn.Module):
