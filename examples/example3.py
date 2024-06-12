@@ -82,12 +82,15 @@ if __name__ == '__main__':
     val_dataloader = DataLoader(val_set, batch_size=val_set_size)
 
     # Initialize models and move them to the device
-    model = someFCN().to(device)
-    model2 = copy.deepcopy(model).to(device)
+    model = someFCN()
+    model2 = copy.deepcopy(model)
 
     threshold = 1e-3
     init_sparsity = measure_sparsity(model.parameters(), threshold=threshold)
     convert_to_deep_rewireable(model, handle_biases='second_bias')
+
+    model.to(device)
+    model2.to(device)
 
     eta = 0.05
     alpha = 1e-5
@@ -101,7 +104,7 @@ if __name__ == '__main__':
     accuracies = []
     accuracies2 = []
 
-    pb = ProgressBar(max_value=100, length=30)
+    pb = ProgressBar(max_value=100, length=50)
 
     for epoch in range(100):
         pb.prnt()
