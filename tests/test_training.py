@@ -10,13 +10,14 @@ from src import DEEPR, SoftDEEPR, convert_to_deep_rewireable, convert_from_deep_
 from src.converter import NonTrainableParameter
 from src.utils import measure_sparsity
 import pytest
+import functools
 
 class FCN(nn.Module):
     def __init__(self):
         super(FCN, self).__init__()
-        self.fc1 = nn.Linear(28*28, 512)
-        self.fc2 = nn.Linear(512, 256)
-        self.fc3 = nn.Linear(256, 10)
+        self.fc1 = nn.Linear(28*28, 512, bias=False)
+        self.fc2 = nn.Linear(512, 256, bias=False)
+        self.fc3 = nn.Linear(256, 10, bias=False)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(0.2)
 
@@ -82,6 +83,50 @@ def test_loss_calculation():
     loss = criterion(output, sample_output)
     assert loss.item() > 0
 
+def verify_number_of_connections(optimizer):
+    active_connections = 0
+    for group in optimizer.param_groups:
+        for p in group['params']:
+            if p.requires_grad == False:
+                continue
+            active_connections += (p.data >= 0).sum().item()
+    assert active_connections == optimizer.nc, f"Expected {optimizer.nc} active connections, found {active_connections}"
+
+
+def test_number_of_connections_init_DEEPR():
+    model = FCN()
+    param_total = sum(p.numel() for p in model.parameters())
+    nc = int(param_total * 0.3)
+    convert_to_deep_rewireable(model)
+    sample_input = torch.randn(1, 28*28)
+    sample_output = torch.randn(1, 10)
+    criterion = torch.nn.MSELoss()
+    optimizer = DEEPR(model.parameters(), nc=nc, lr=0.05, l1=0.005)
+    verify_number_of_connections(optimizer)
+
+    convert_from_deep_rewireable(model)
+    assert sum(torch.count_nonzero(p) for p in model.parameters()) <= nc
+
+
+def test_number_of_connections_step_DEEPR():
+    model = FCN()
+    param_total = sum(p.numel() for p in model.parameters())
+    nc = int(param_total * 0.3)
+    convert_to_deep_rewireable(model)
+    sample_input = torch.randn(1, 28*28)
+    sample_output = torch.randn(1, 10)
+    criterion = torch.nn.MSELoss()
+    optimizer = DEEPR(model.parameters(), nc=nc, lr=0.05, l1=0.005)
+
+    output = model(sample_input)
+    loss = criterion(output, sample_output)
+    loss.backward()
+    optimizer.step()
+    verify_number_of_connections(optimizer)
+    convert_from_deep_rewireable(model)
+    assert sum(torch.count_nonzero(p) for p in model.parameters() ) <= nc
+ 
+
 def test_backward_pass():
     model = FCN()
     convert_to_deep_rewireable(model)
@@ -123,8 +168,7 @@ def test_parameter_updates():
         else:
             assert not torch.equal(initial_params[name], param)
 
-
-def test_overfitting_small_batch():
+def test_overfitting_small_batch_SoftDEEPR():
     model = FCN()
     convert_to_deep_rewireable(model)
     criterion = torch.nn.MSELoss()
@@ -144,6 +188,28 @@ def test_overfitting_small_batch():
     assert measure_sparsity(model.parameters()) > 0.7
     assert loss.item() < 0.1
 
+def test_overfitting_small_batch_DEEPR():
+    model = FCN()
+    param_total = sum(p.numel() for p in model.parameters())
+    sparsity = 0.7
+    nc = int(param_total * (1 - sparsity))
+    convert_to_deep_rewireable(model)
+    criterion = torch.nn.MSELoss()
+    optimizer = DEEPR(model.parameters(), nc=nc, lr=0.5, l1=0.0005)
+
+    sample_input = torch.randn(10, 28*28)
+    sample_output = torch.randn(10, 10)
+    
+    for epoch in range(100):
+        optimizer.zero_grad()
+        output = model(sample_input)
+        loss = criterion(output, sample_output)
+        loss.backward()
+        optimizer.step()
+    
+    convert_from_deep_rewireable(model)
+    assert measure_sparsity(model.parameters()) > sparsity
+    assert loss.item() < 0.1
 
 def set_random_seed(seed):
     torch.manual_seed(seed)
