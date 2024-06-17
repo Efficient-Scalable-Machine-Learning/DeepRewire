@@ -43,20 +43,6 @@ class DEEPR(Optimizer):
         self.init_activation(activate_indices)
 
 
-    def sample_unique_indices(self, length, max_int):
-    
-        if length > max_int:
-            raise ValueError("Cannot sample more unique indices than the size of the range.")
-        
-        selected_indices = set()
-        
-        while len(selected_indices) < length:
-            new_indices = torch.randint(0, max_int, (length - len(selected_indices),))
-            selected_indices.update(new_indices.tolist())
-        
-        return torch.tensor(list(selected_indices))
-
-
     def init_activation(self, activate_indices):
         """
         Function to initialize activation by flipping the sign of the selected indices.
@@ -157,6 +143,7 @@ class DEEPR(Optimizer):
         diff = self.nc - active_connections
         while diff > 0:
             candidate_indices = torch.randint(low=0, high=self.n_parameters, size=(diff,))
+            candidate_indices = candidate_indices.to(next(self.param_groups[0]['params'][0].parameters()).device)
             diff -= self.attempt_activation(candidate_indices)
 
         return loss
