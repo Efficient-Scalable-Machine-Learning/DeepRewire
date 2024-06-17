@@ -98,7 +98,9 @@ if __name__ == '__main__':
     model = someFCN()
     model2 = copy.deepcopy(model)
     model3 = copy.deepcopy(model)
-
+    param_total = sum(p.numel() for p in model.parameters())
+    nc = int(param_total * 0.3)
+ 
     threshold = 1e-3
     init_sparsity = measure_sparsity(model.parameters(), threshold=threshold)
     convert_to_deep_rewireable(model, handle_biases='second_bias')
@@ -113,7 +115,7 @@ if __name__ == '__main__':
     T = eta * alpha**2 / 18
     optimizer = SoftDEEPR(model.parameters(), lr=eta, l1=alpha, temp=T)
     optimizer2 = torch.optim.SGD(model2.parameters(), lr=eta)
-    optimizer3 = DEEPR(model3.parameters(), lr=eta, l1=alpha, temp=T)
+    optimizer3 = DEEPR(model3.parameters(), nc=nc, lr=eta, l1=alpha, temp=T)
     criterium = nn.CrossEntropyLoss()
 
     optimizer_results = {}
