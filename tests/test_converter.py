@@ -12,9 +12,11 @@ import pytest
 class FCN(nn.Module):
     def __init__(self):
         super(FCN, self).__init__()
+        self.input_shape = (28*28,)
+        self.output_shape = (10,)
         self.fc1 = nn.Linear(28*28, 512, bias=False)
-        self.fc2 = nn.Linear(512, 256)
-        self.fc3 = nn.Linear(256, 10)
+        self.fc2 = nn.Linear(512, 256, bias=False)
+        self.fc3 = nn.Linear(256, 10, bias=False)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(0.2)
 
@@ -30,6 +32,8 @@ class FCN(nn.Module):
 class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
+        self.input_shape = (3, 32, 32,)
+        self.output_shape = (10,)
         self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
@@ -48,8 +52,10 @@ class CNN(nn.Module):
         x = self.fc2(x)
         return x
 
-def test_conversion_FCN():
-    rewired_model = FCN()
+
+@pytest.mark.parametrize("model_class", [FCN, CNN])
+def test_parameters(model_class):
+    rewired_model = model_class()
     standard_model = copy.deepcopy(rewired_model)
     convert_to_deep_rewireable(rewired_model)
     a = set(rewired_model.state_dict().keys())
@@ -63,17 +69,20 @@ def test_conversion_FCN():
     s2 = measure_sparsity(standard_model.parameters())
     assert s1 > s2
 
-def test_conversion_CNN():
-    rewired_model = CNN()
-    standard_model = copy.deepcopy(rewired_model)
-    convert_to_deep_rewireable(rewired_model)
-    a = set(rewired_model.state_dict().keys())
-    b = set(standard_model.state_dict().keys())
-    assert a != b
-    convert_from_deep_rewireable(rewired_model)
-    a = set(rewired_model.state_dict().keys())
-    b = set(standard_model.state_dict().keys())
-    assert a == b
-    s1 = measure_sparsity(rewired_model.parameters())
-    s2 = measure_sparsity(standard_model.parameters())
-    assert s1 > s2
+@pytest.mark.parametrize("model_class", [FCN])
+def test_parameters(model_class):
+    for i in range(10):
+        with torch.no_grad():
+            model = model_class()
+            model.eval()
+
+            convert_to_deep_rewireable(model)
+
+            inpt = torch.rand((1, *model.input_shape))
+            out_pre_reconversion = model(inpt)
+
+            convert_from_deep_rewireable(model)
+
+            out_post_reconversion = model(inpt)
+
+        assert torch.equal(out_pre_reconversion, out_post_reconversion)

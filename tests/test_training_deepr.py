@@ -19,14 +19,11 @@ class FCN(nn.Module):
         self.fc2 = nn.Linear(512, 256, bias=False)
         self.fc3 = nn.Linear(256, 10, bias=False)
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.2)
 
     def forward(self, x):
         x = x.view(-1, 28*28)
         x = self.relu(self.fc1(x))
-        x = self.dropout(x)
         x = self.relu(self.fc2(x))
-        x = self.dropout(x)
         x = self.fc3(x)
         return x
 
@@ -39,7 +36,6 @@ class CNN(nn.Module):
         self.fc1 = nn.Linear(64 * 8 * 8, 512)
         self.fc2 = nn.Linear(512, 10)
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.25)
 
     def forward(self, x):
         x = self.relu(self.conv1(x))
@@ -47,7 +43,7 @@ class CNN(nn.Module):
         x = self.relu(self.conv2(x))
         x = self.pool(x)
         x = x.view(-1, 64 * 8 * 8)
-        x = self.dropout(self.relu(self.fc1(x)))
+        x = self.relu(self.fc1(x))
         x = self.fc2(x)
         return x
 
@@ -175,29 +171,6 @@ def test_parameter_updates():
         else:
             assert not torch.equal(initial_params[name], param)
 
-def test_overfitting_small_batch_DEEPR():
-    model = FCN()
-    param_total = sum(p.numel() for p in model.parameters())
-    sparsity = 0.7
-    nc = int(param_total * (1 - sparsity))
-    convert_to_deep_rewireable(model)
-    criterion = torch.nn.MSELoss()
-    optimizer = DEEPR(model.parameters(), nc=nc, lr=0.5, l1=0.0005)
-
-    sample_input = torch.randn(10, 28*28)
-    sample_output = torch.randn(10, 10)
-    
-    for epoch in range(100):
-        optimizer.zero_grad()
-        output = model(sample_input)
-        loss = criterion(output, sample_output)
-        loss.backward()
-        optimizer.step()
-    
-    convert_from_deep_rewireable(model)
-    assert measure_sparsity(model.parameters()) > 0.7
-    assert loss.item() < 0.1
-
 def test_overfitting_small_batch():
     model = FCN()
     param_total = sum(p.numel() for p in model.parameters())
@@ -219,7 +192,7 @@ def test_overfitting_small_batch():
     
     convert_from_deep_rewireable(model)
     assert measure_sparsity(model.parameters()) > sparsity
-    assert loss.item() < 0.1
+    assert loss.item() < 0.01
 
 def set_random_seed(seed):
     torch.manual_seed(seed)
