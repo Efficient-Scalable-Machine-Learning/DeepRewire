@@ -156,7 +156,7 @@ class DEEPR(Optimizer):
         diff = self.nc - active_connections
         while diff > 0:
             candidate_indices = torch.randint(low=0, high=self.n_parameters, size=(diff,))
-            candidate_indices = candidate_indices.to(next(self.param_groups[0]['params'][0].parameters()).device)
+            candidate_indices = candidate_indices.to(self.param_groups[0]['params'][0].device)
             diff -= self.attempt_activation(candidate_indices)
 
         return loss
