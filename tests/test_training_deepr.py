@@ -6,7 +6,7 @@ import time
 import torch
 import copy
 from torch import nn
-from src import DEEPR, SoftDEEPR, convert_to_deep_rewireable, convert_from_deep_rewireable
+from src import DEEPR, convert_to_deep_rewireable, convert_from_deep_rewireable
 from src.converter import NonTrainableParameter
 from src.utils import measure_sparsity
 import pytest
@@ -93,7 +93,7 @@ def verify_number_of_connections(optimizer):
     assert active_connections == optimizer.nc, f"Expected {optimizer.nc} active connections, found {active_connections}"
 
 
-def test_number_of_connections_init_DEEPR():
+def test_number_of_connections_init():
     model = FCN()
     param_total = sum(p.numel() for p in model.parameters())
     nc = int(param_total * 0.3)
@@ -108,7 +108,7 @@ def test_number_of_connections_init_DEEPR():
     assert sum(torch.count_nonzero(p) for p in model.parameters()) <= nc
 
 
-def test_number_of_connections_step_DEEPR():
+def test_number_of_connections_step():
     model = FCN()
     param_total = sum(p.numel() for p in model.parameters())
     nc = int(param_total * 0.3)
@@ -129,11 +129,14 @@ def test_number_of_connections_step_DEEPR():
 
 def test_backward_pass():
     model = FCN()
+    param_total = sum(p.numel() for p in model.parameters())
+    sparsity = 0.7
+    nc = int(param_total * (1 - sparsity))
     convert_to_deep_rewireable(model)
     sample_input = torch.randn(1, 28*28)
     sample_output = torch.randn(1, 10)
     criterion = torch.nn.MSELoss()
-    optimizer = SoftDEEPR(model.parameters(), lr=0.05, l1=0.005)
+    optimizer = DEEPR(model.parameters(), nc=nc, lr=0.05, l1=0.005)
 
     output = model(sample_input)
     loss = criterion(output, sample_output)
@@ -149,11 +152,15 @@ def test_backward_pass():
 
 def test_parameter_updates():
     model = FCN()
+    param_total = sum(p.numel() for p in model.parameters())
+    sparsity = 0.7
+    nc = int(param_total * (1 - sparsity))
+ 
     convert_to_deep_rewireable(model)
     sample_input = torch.randn(1, 28*28)
     sample_output = torch.randn(1, 10)
     criterion = torch.nn.MSELoss()
-    optimizer = SoftDEEPR(model.parameters(), lr=0.05, l1=0.005)
+    optimizer = DEEPR(model.parameters(), nc=nc, lr=0.05, l1=0.005)
 
     initial_params = {name: param.clone() for name, param in model.named_parameters()}
     
@@ -168,11 +175,14 @@ def test_parameter_updates():
         else:
             assert not torch.equal(initial_params[name], param)
 
-def test_overfitting_small_batch_SoftDEEPR():
+def test_overfitting_small_batch_DEEPR():
     model = FCN()
+    param_total = sum(p.numel() for p in model.parameters())
+    sparsity = 0.7
+    nc = int(param_total * (1 - sparsity))
     convert_to_deep_rewireable(model)
     criterion = torch.nn.MSELoss()
-    optimizer = SoftDEEPR(model.parameters(), lr=0.5, l1=0.0005)
+    optimizer = DEEPR(model.parameters(), nc=nc, lr=0.5, l1=0.0005)
 
     sample_input = torch.randn(10, 28*28)
     sample_output = torch.randn(10, 10)
@@ -188,7 +198,7 @@ def test_overfitting_small_batch_SoftDEEPR():
     assert measure_sparsity(model.parameters()) > 0.7
     assert loss.item() < 0.1
 
-def test_overfitting_small_batch_DEEPR():
+def test_overfitting_small_batch():
     model = FCN()
     param_total = sum(p.numel() for p in model.parameters())
     sparsity = 0.7
@@ -255,10 +265,14 @@ def test_training_time():
     
     #print(prof.key_averages().table(sort_by="cpu_time_total"))
 
-    # SoftDEEPR
+    # DEEPR
     model = FCN()
+    param_total = sum(p.numel() for p in model.parameters())
+    sparsity = 0.9
+    nc = int(param_total * (1 - sparsity))
+
     convert_to_deep_rewireable(model)
-    optimizer = SoftDEEPR(model.parameters(), lr=0.5, l1=0.0005)
+    optimizer = DEEPR(model.parameters(), nc=nc, lr=0.5, l1=0.0005)
     
     # Warm-up
     for _ in range(10):
@@ -274,5 +288,5 @@ def test_training_time():
     
     #print(prof.key_averages().table(sort_by="cpu_time_total"))
 
-    print(f"Regular SGD time: {regular_time:.4f}s, SoftDEEPR time: {rewired_time:.4f}s")
+    print(f"Regular SGD time: {regular_time:.4f}s, DEEPR time: {rewired_time:.4f}s")
     assert rewired_time < 7 * regular_time

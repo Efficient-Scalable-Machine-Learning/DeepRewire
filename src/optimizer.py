@@ -70,25 +70,19 @@ class DEEPR(Optimizer):
                 
                 num_elements = p.data.numel()
 
-                # Ensure all elements are negative (-1 to avoid zeros) to start with
                 p.data = -torch.abs(p.data)
-                p.data[p.data == 0] -= 0.01
                 
                 p_data_flat = p.data.view(-1)
                 
-                # Mask to find indices within current parameter
                 in_current_param_mask = remaining_indices < num_elements
                 current_indices = remaining_indices[in_current_param_mask]
                 
                 if current_indices.numel() > 0:
-                    # Activate the selected indices by making them positive
                     p_data_flat[current_indices] *= -1
                     p_data_flat[current_indices] = torch.clamp(p_data_flat[current_indices], min=group['reset_val'])
                     
-                    # Remove the indices that are within the current parameter
                     remaining_indices = remaining_indices[~in_current_param_mask]
                     
-                # Adjust remaining indices by subtracting the number of elements in the current parameter
                 remaining_indices -= num_elements
                 
                 if remaining_indices.numel() == 0:
@@ -99,7 +93,7 @@ class DEEPR(Optimizer):
         Function will activate connections if previously inactive and return the number of activations.
         """
         activations = 0
-        remaining_indices = candidate_indices.clone()
+        remaining_indices = candidate_indices
         
         for group in self.param_groups:
             for p in group['params']:
@@ -109,26 +103,19 @@ class DEEPR(Optimizer):
                 p_data_flat = p.data.view(-1)
                 num_elements = p_data_flat.numel()
                 
-                # Mask to find indices within current parameter
                 in_current_param_mask = remaining_indices < num_elements
                 current_indices = remaining_indices[in_current_param_mask]
                 
                 if current_indices.numel() > 0:
-                    # Select the values at the current indices
                     selected_values = p_data_flat[current_indices]
                     
-                    # Identify the indices where the values are less than 0
                     to_activate_mask = selected_values < 0
                     to_activate_indices = current_indices[to_activate_mask]
                     
-                    # Activate the selected indices
                     if to_activate_indices.numel() > 0:
                         p_data_flat[to_activate_indices] = group['reset_val']
-
-                    # Count the activations
-                    activations += to_activate_indices.numel()
+                        activations += to_activate_indices.numel()
                 
-                # Update remaining indices
                 remaining_indices = remaining_indices[~in_current_param_mask] - num_elements
                 
                 if remaining_indices.numel() == 0:
@@ -143,21 +130,23 @@ class DEEPR(Optimizer):
             with torch.enable_grad():
                 loss = closure()
 
-        # update step, then count of active connections
         active_connections = 0
         idx_counter = 0
         for group in self.param_groups:
+            lr = group['lr']
+            l1 = group['l1']
+            temp = group['temp']
+            sqrt_temp = (2 * lr * temp) ** 0.5
+           
             for p in group['params']:
                 if p.grad is None:
                     continue
 
-                # update step for active connections
                 grad = p.grad.data
-                noise = (2*group['lr']*group['temp'])**0.5 * torch.randn_like(p.data)
+                noise = sqrt_temp * torch.randn_like(p.data)
                 mask = p.data >= 0
-                p.data[mask] += -group['lr'] * (grad[mask] + group['l1']) + noise[mask]
+                p.data += mask.float() * (-lr * (grad + l1) + noise)
 
-                # count all active connections
                 active_connections += torch.sum(p.data > 0).item()
                 idx_counter += p.data.numel()
 
