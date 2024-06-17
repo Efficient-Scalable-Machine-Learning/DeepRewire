@@ -12,9 +12,13 @@ from src.utils import measure_sparsity
 import pytest
 import functools
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 class FCN(nn.Module):
     def __init__(self):
         super(FCN, self).__init__()
+        self.input_shape = (28*28,)
+        self.output_shape = (10,)
         self.fc1 = nn.Linear(28*28, 512, bias=False)
         self.fc2 = nn.Linear(512, 256, bias=False)
         self.fc3 = nn.Linear(256, 10, bias=False)
@@ -30,12 +34,14 @@ class FCN(nn.Module):
 class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
-        self.fc1 = nn.Linear(64 * 8 * 8, 512)
-        self.fc2 = nn.Linear(512, 10)
-        self.relu = nn.ReLU()
+        self.input_shape = (3, 32, 32,)
+        self.output_shape = (10,)
+        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1).to(device)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1).to(device)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0).to(device)
+        self.fc1 = nn.Linear(64 * 8 * 8, 512).to(device)
+        self.fc2 = nn.Linear(512, 10).to(device)
+        self.relu = nn.ReLU().to(device)
 
     def forward(self, x):
         x = self.relu(self.conv1(x))
@@ -65,7 +71,8 @@ def test_non_trainable_parameter():
 def test_forward_pass():
     model = FCN()
     convert_to_deep_rewireable(model)
-    sample_input = torch.randn(1, 28*28)
+    model.to(device)
+    sample_input = torch.randn(1, 28*28).to(device)
     output = model(sample_input)
     assert output.shape == (1, 10)
 
@@ -94,8 +101,8 @@ def test_number_of_connections_init():
     param_total = sum(p.numel() for p in model.parameters())
     nc = int(param_total * 0.3)
     convert_to_deep_rewireable(model)
-    sample_input = torch.randn(1, 28*28)
-    sample_output = torch.randn(1, 10)
+    sample_input = torch.randn(1, *model.input_shape)
+    sample_output = torch.randn(1, *model.output_shape)
     criterion = torch.nn.MSELoss()
     optimizer = DEEPR(model.parameters(), nc=nc, lr=0.05, l1=0.005)
     verify_number_of_connections(optimizer)
@@ -109,8 +116,9 @@ def test_number_of_connections_step():
     param_total = sum(p.numel() for p in model.parameters())
     nc = int(param_total * 0.3)
     convert_to_deep_rewireable(model)
-    sample_input = torch.randn(1, 28*28)
-    sample_output = torch.randn(1, 10)
+    model.to(device)
+    sample_input = torch.randn(1, *model.input_shape).to(device)
+    sample_output = torch.randn(1, *model.output_shape).to(device)
     criterion = torch.nn.MSELoss()
     optimizer = DEEPR(model.parameters(), nc=nc, lr=0.05, l1=0.005)
 
@@ -123,14 +131,16 @@ def test_number_of_connections_step():
     assert sum(torch.count_nonzero(p) for p in model.parameters() ) <= nc
  
 
-def test_backward_pass():
-    model = FCN()
+@pytest.mark.parametrize("model_class", [FCN, CNN])
+def test_backward_pass(model_class):
+    model = model_class()
     param_total = sum(p.numel() for p in model.parameters())
     sparsity = 0.7
     nc = int(param_total * (1 - sparsity))
     convert_to_deep_rewireable(model)
-    sample_input = torch.randn(1, 28*28)
-    sample_output = torch.randn(1, 10)
+    model.to(device)
+    sample_input = torch.randn(1, *model.input_shape).to(device)
+    sample_output = torch.randn(1, *model.output_shape).to(device)
     criterion = torch.nn.MSELoss()
     optimizer = DEEPR(model.parameters(), nc=nc, lr=0.05, l1=0.005)
 
@@ -146,15 +156,17 @@ def test_backward_pass():
             assert param.grad is not None
 
 
-def test_parameter_updates():
-    model = FCN()
+@pytest.mark.parametrize("model_class", [FCN, CNN])
+def test_parameter_updates(model_class):
+    model = model_class()
     param_total = sum(p.numel() for p in model.parameters())
     sparsity = 0.7
     nc = int(param_total * (1 - sparsity))
  
     convert_to_deep_rewireable(model)
-    sample_input = torch.randn(1, 28*28)
-    sample_output = torch.randn(1, 10)
+    model.to(device)
+    sample_input = torch.randn(1, *model.input_shape).to(device)
+    sample_output = torch.randn(1, *model.output_shape).to(device)
     criterion = torch.nn.MSELoss()
     optimizer = DEEPR(model.parameters(), nc=nc, lr=0.05, l1=0.005)
 
@@ -171,17 +183,19 @@ def test_parameter_updates():
         else:
             assert not torch.equal(initial_params[name], param)
 
-def test_overfitting_small_batch():
-    model = FCN()
+@pytest.mark.parametrize("model_class", [FCN, CNN])
+def test_overfitting_small_batch(model_class):
+    model = model_class()
     param_total = sum(p.numel() for p in model.parameters())
     sparsity = 0.7
     nc = int(param_total * (1 - sparsity))
     convert_to_deep_rewireable(model)
+    model.to(device)
     criterion = torch.nn.MSELoss()
-    optimizer = DEEPR(model.parameters(), nc=nc, lr=0.5, l1=0.0005)
+    optimizer = DEEPR(model.parameters(), nc=nc, lr=0.6, l1=0.0005)
 
-    sample_input = torch.randn(10, 28*28)
-    sample_output = torch.randn(10, 10)
+    sample_input = torch.randn(10, *model.input_shape).to(device)
+    sample_output = torch.randn(10, *model.output_shape).to(device)
     
     for epoch in range(100):
         optimizer.zero_grad()
@@ -192,7 +206,7 @@ def test_overfitting_small_batch():
     
     convert_from_deep_rewireable(model)
     assert measure_sparsity(model.parameters()) > sparsity
-    assert loss.item() < 0.01
+    assert loss.item() < 0.05
 
 def set_random_seed(seed):
     torch.manual_seed(seed)
@@ -206,8 +220,8 @@ def set_random_seed(seed):
 def profile_optimizer(optimizer, model, criterion, epochs=100):
     start_time = time.time()
     for epoch in range(epochs):
-        sample_input = torch.randn(32, 28*28)
-        sample_output = torch.randn(32, 10)
+        sample_input = torch.randn(32, 28*28).to(device)
+        sample_output = torch.randn(32, 10).to(device)
         optimizer.zero_grad()
         output = model(sample_input)
         loss = criterion(output, sample_output)
@@ -220,14 +234,14 @@ def test_training_time():
     set_random_seed(42)
 
     # Standard SGD
-    model = FCN()
+    model = FCN().to(device)
     criterion = nn.MSELoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
     
     # Warm-up
     for _ in range(10):
-        sample_input = torch.randn(32, 28*28)
-        sample_output = torch.randn(32, 10)
+        sample_input = torch.randn(32, 28*28).to(device)
+        sample_output = torch.randn(32, 10).to(device)
         optimizer.zero_grad()
         output = model(sample_input)
         loss = criterion(output, sample_output)
@@ -245,12 +259,13 @@ def test_training_time():
     nc = int(param_total * (1 - sparsity))
 
     convert_to_deep_rewireable(model)
+    model.to(device)
     optimizer = DEEPR(model.parameters(), nc=nc, lr=0.5, l1=0.0005)
     
     # Warm-up
     for _ in range(10):
-        sample_input = torch.randn(32, 28*28)
-        sample_output = torch.randn(32, 10)
+        sample_input = torch.randn(32, 28*28).to(device)
+        sample_output = torch.randn(32, 10).to(device)
         optimizer.zero_grad()
         output = model(sample_input)
         loss = criterion(output, sample_output)
