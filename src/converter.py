@@ -49,7 +49,11 @@ def get_signs(module, handle_biases):
 
 
 def convert_to_deep_rewireable(module: nn.Module, handle_biases="second_bias"):
-    """Change the forward pass of a standard network to the rewire-forward pass"""
+    """Change the forward pass of a standard network to the rewire-forward pass.
+       First returns params to be optimized by specific opimizer and then other paramteters"""
+
+    sparse_params = []
+    other_params = []
 
     def linear_forward(x, mod=module):
         if handle_biases == 'as_connections':
@@ -83,14 +87,23 @@ def convert_to_deep_rewireable(module: nn.Module, handle_biases="second_bias"):
         weight_signs, bias_signs, bias_negative = get_signs(module, handle_biases)
         register_params(module, weight_signs, bias_signs, bias_negative)
         module.forward = linear_forward
+        sparse_params.extend([module.weight, module.bias])
 
     elif isinstance(module, nn.Conv2d):
         weight_signs, bias_signs, bias_negative = get_signs(module, handle_biases)
         register_params(module, weight_signs, bias_signs, bias_negative)
         module.forward = conv2d_forward
+        sparse_params.extend([module.weight, module.bias])
+
+    else:
+        other_params.extend(module.parameters(recurse=False))
 
     for _, submodule in module.named_children():
-        convert_to_deep_rewireable(submodule, handle_biases=handle_biases)
+        sparse_p, other_p = convert_to_deep_rewireable(submodule, handle_biases=handle_biases)
+        sparse_params.extend(sparse_p)
+        other_params.extend(other_p)
+
+    return sparse_params, other_params
 
 
 def merge_back(module: nn.Module):
