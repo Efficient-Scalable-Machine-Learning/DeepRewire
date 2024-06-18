@@ -58,13 +58,13 @@ if __name__ == '__main__':
     # Initialize the network, loss function, and optimizer
     model = FCNN()
     print(get_compressed_model_size(model))
-    convert_to_deep_rewireable(model)
+    sparse_params, _ = convert_to_deep_rewireable(model)
     model.to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = SoftDEEPR(model.parameters(), lr=0.05, l1=1e-5)
+    optimizer = SoftDEEPR(sparse_params, lr=0.05, l1=1e-5)
 
     # Training loop
-    num_epochs = 100
+    num_epochs = 500
     train_losses = []
     val_accuracies = []
     sparsities = []
@@ -108,9 +108,9 @@ if __name__ == '__main__':
         with torch.no_grad():
             sparsity_model = copy.deepcopy(model)
             convert_from_deep_rewireable(sparsity_model)
-            sparsities.append(measure_sparsity(sparsity_model.parameters()))
+            sparsities.append(measure_sparsity(sparsity_model.parameters())*100)
 
-        print(f'Epoch [{epoch + 1}/{num_epochs}], Train Loss: {train_losses[-1]:.4f}, Val Accuracy: {val_accuracies[-1]:.2f}%, Sparsity: {sparsities[-1]}')
+        print(f'Epoch [{epoch + 1}/{num_epochs}], Train Loss: {train_losses[-1]:.4f}, Val Accuracy: {val_accuracies[-1]:.2f}%, Sparsity: {sparsities[-1]:.2f}%')
 
     # Testing the model
     convert_from_deep_rewireable(model)
@@ -132,7 +132,7 @@ if __name__ == '__main__':
         print(f'Test Accuracy: {100 * correct / total:.2f}%')
 
     # Plotting training loss and validation accuracy
-    fig, ax1 = plt.subplots()
+    fig, ax1 = plt.subplots(figsize=(12, 6))
 
     ax1.set_xlabel('Epochs')
     ax1.set_ylabel('Training Loss', color='tab:blue')
@@ -145,7 +145,7 @@ if __name__ == '__main__':
     ax2.tick_params(axis='y', labelcolor='tab:orange')
 
     ax3 = ax1.twinx()
-    ax3.set_ylabel('Sparsity', color='tab:green')
+    ax3.set_ylabel('Sparsity (%)', color='tab:green')
     ax3.plot(sparsities, label='Sparsity', color='tab:green')
     ax3.tick_params(axis='y', labelcolor='tab:green')
 
@@ -153,4 +153,5 @@ if __name__ == '__main__':
 
     fig.tight_layout()
     plt.title(f'SoftDEEPR on MNIST')
-    plt.show()
+
+    plt.savefig("mnist_softdeepr.svg", format='svg', bbox_inches='tight')
