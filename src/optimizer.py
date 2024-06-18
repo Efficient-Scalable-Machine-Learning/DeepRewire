@@ -9,8 +9,8 @@ class DEEPR(Optimizer):
     """
     Deep-rewiring oftimizer with hard constraint on number of connections
     """
-    def __init__(self, params, nc=required, lr=required, l1=0.0, reset_val=0.0, temp=None):
-        if lr is not required and lr < 0.0:
+    def __init__(self, params, nc=required, lr=0.05, l1=1e-4, reset_val=0.0, temp=None):
+        if lr < 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")
         if nc is not required and nc < 0.0 or not isinstance(nc, int):
             raise ValueError(f"Invalid number of connections: {nc}")
@@ -20,7 +20,7 @@ class DEEPR(Optimizer):
             raise ValueError(f"Invalid reset value: {reset_val}")
 
         if temp is None:
-            temp = lr * l1**2 / 18
+            temp = lr / 210
 
         self.nc = nc
 
@@ -166,15 +166,15 @@ class SoftDEEPR(Optimizer):
     """
     Deep-rewiring oftimizer with soft constraint on number of connections
     """
-    def __init__(self, params, lr=required, l1=0.0, temp=None, min_weight=None):
-        if lr is not required and lr < 0.0:
+    def __init__(self, params, lr=0.05, l1=1e-5, temp=None, min_weight=None):
+        if lr < 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")
         if l1 < 0.0:
             raise ValueError(f"Invalid L1 regularization term: {l1}")
         if temp is None:
             temp = lr * l1**2 / 18
         if min_weight is None:
-            min_weight = -3*lr
+            min_weight = -3*l1
 
         defaults = dict(lr=lr, l1=l1, temp=temp, min_weight=min_weight)
         super(SoftDEEPR, self).__init__(params, defaults)
@@ -200,10 +200,15 @@ class SoftDEEPR(Optimizer):
                 noise = sqrt_temp * torch.randn_like(p.data)
 
                 mask = p.data >= 0
-
+               
+                """
                 p.data += mask.float() * (-lr * (grad + l1) + noise)
                 p.data += (~mask).float() * noise.clamp(min=min_weight)
+                """
 
+                # this is how its done in the paper i think:
+                p.data += noise - mask.float() * lr * (grad + l1)
+                p.data = p.data.clamp(min=min_weight)
         return loss
 
 if __name__ == '__main__':

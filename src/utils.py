@@ -3,6 +3,8 @@ provides some useful functions
 """
 
 import torch
+import zipfile
+import io
 
 def measure_sparsity(parameters, threshold=0):
     """
@@ -20,6 +22,25 @@ def measure_sparsity(parameters, threshold=0):
             zeros += (p == 0).float().sum()
         total += p.numel()
     return float(zeros/total)
+
+
+def get_compressed_model_size(model):
+    """
+    returns model size in MB
+    """
+    # Save the model state dictionary to an in-memory buffer
+    buffer = io.BytesIO()
+    torch.save(model.state_dict(), buffer)
+    buffer.seek(0)
+
+    # Compress the buffer using zipfile and calculate the size
+    compressed_buffer = io.BytesIO()
+    with zipfile.ZipFile(compressed_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        zipf.writestr('model.pth', buffer.getvalue())
+
+    compressed_size_bytes = len(compressed_buffer.getvalue())
+
+    return compressed_size_bytes / (1024 * 1024)
 
 class ProgressBar:
     """

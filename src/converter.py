@@ -7,8 +7,8 @@ from torch.nn.modules.utils import _pair
 class NonTrainableParameter(nn.Parameter):
     """A parameter that can't be trained. Requires grad will always be False"""
 
-    def __new__(cls, *args, **kwargs):
-        return super().__new__(cls, *args, **kwargs, requires_grad=False)
+    def __new__(cls, data=None, requires_grad=False):
+        return super().__new__(cls, data=data, requires_grad=False)
 
     @property
     def requires_grad(self):
