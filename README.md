@@ -28,7 +28,7 @@ rewireable_params, other_params = convert_to_deep_rewireable(model)
 
 # Define optimizers
 optim1 = SoftDEEPR(rewireable_params, lr=0.05, l1=1e-5) 
-optim2 = torch.optim.SGD(other_params, lr=0.05) # Optional, for other parameters
+optim2 = torch.optim.SGD(other_params, lr=0.05) # Optional, for parameters that are not rewireable
 
 # ... Standard training loop ...
 
