@@ -11,17 +11,30 @@ DeepRewire provides tools to convert standard neural network parameters into a r
 - **Optimizers**: Use DEEPR and SoftDEEPR to optimize sparse networks.
 - **Examples**: Run provided examples to see the conversion and optimization in action.
 
-Usage example:
+## Example Usage:
 ```python
-model = someTorchModule()
+import torch
+from deep_rewire import convert_to_deep_rewireable, convert_from_deep_rewireable, SoftDEEPR
+
+# Define your model
+model = torch.nn.Sequential(
+    torch.nn.Linear(784, 128),
+    torch.nn.ReLU(),
+    torch.nn.Linear(128, 10)
+)
+
+# Convert model parameters to rewireable form
 rewireable_params, other_params = convert_to_deep_rewireable(model)
-optim1 = SoftDEEPR(sparse_params, lr=0.05, l1=1e-5) 
-optim2 = torch.optim.SGD(lr=0.05) # not needed if no other parameters
 
-# [... STANDARD TRAINING LOOP ...]
+# Define optimizers
+optim1 = SoftDEEPR(rewireable_params, lr=0.05, l1=1e-5) 
+optim2 = torch.optim.SGD(other_params, lr=0.05) # Optional, for other parameters
 
+# ... Standard training loop ...
+
+# Convert back to standard form
 convert_from_deep_rewireable(model)
-# model has same paramters as before but is hopefully sparse now.
+# Model has the same parameters but is now sparse.
 ```
 
 ![SoftDEEPR Performance](https://github.com/LuggiStruggi/DeepRewire/blob/main/images/mnist_softdeepr.svg)
