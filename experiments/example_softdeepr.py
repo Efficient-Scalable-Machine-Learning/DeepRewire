@@ -22,7 +22,7 @@ class FCNN(nn.Module):
         self.fc2 = nn.Linear(512, 256)
         self.fc3 = nn.Linear(256, 10)
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.9)
+        self.dropout = nn.Dropout(0.2)
 
     def forward(self, x):
         x = x.view(-1, 28 * 28)  # Flatten the input tensor
@@ -58,7 +58,7 @@ if __name__ == '__main__':
     # Initialize the network, loss function, and optimizer
     model = FCNN()
     model.to(device)
-    sparse_params, _ = convert_to_deep_rewireable(model)
+    sparse_params, _ = convert_to_deep_rewireable(model, active_probability=0.1, keep_signs=False)
     criterion = nn.CrossEntropyLoss()
     optimizer = SoftDEEPR(sparse_params, lr=0.05, l1=1e-5)
 
