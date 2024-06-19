@@ -17,3 +17,31 @@ convert_from_deep_rewireable(model)
 ```
 
 ![SoftDEEPR Performance](https://github.com/LuggiStruggi/DeepRewire/blob/main/images/mnist_softdeepr.svg)
+
+
+## Functionality
+
+### Conversion
+
+```python
+convert_to_deep_rewireable(module: nn.Module, handle_biases: str = "second_bias",
+                           active_probability: float = None, keep_signs: bool = False)
+```
+Using `convert_to_deep_rewireable` you can convert a PyTorch Module into a form that can be optimized by the `(Soft)DEEPR` algorithm.
+The function returns two lists. First a list of parameters that can be optimized with `(Soft)DEEPR` and then a list for which you can use any other optimizer.
+
+- `handle_biases` selects the strategy how to handle biases. You can currently choose between
+    - `ignore`: Ignores the bias as a parameter for `(Soft)DEEPR` and adds it to the list of other parameters
+    - `as_connections`: Just converts it as every other connection, randomly assigning one fixed sign
+    - `second_bias`: Splits it into two biases: one with negative and one with positive sign, such that it can be optimized by `(Soft)DEEPR` directly, without fixing the sign.
+ 
+- `active_probability`: Sets the probability of an connection being initially active. Per default the connection is set to active based on the weights of the given module.
+
+- `keep_signs`: Keeps the initially given network functionally as is. This is interesting when using an already pretrained network.
+
+```python
+convert_from_deep_rewireable(module: nn.Module)
+```
+Using `convert_from_deep_rewireable` you can convert a module from the rewireable form back into its initial form, where you can actually see its sparsity.
+
+### Optimizers
