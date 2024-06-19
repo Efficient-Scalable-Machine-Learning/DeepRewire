@@ -44,7 +44,7 @@ def get_signs(module, handle_biases, active_probability=None, keep_signs=False):
         module.weight = nn.Parameter(w*active_tensor)
 
     bias_signs = bias_negative = None
-    if module.bias is None:
+    if module.bias is None or handle_biases == 'ignore':
         return weight_signs, bias_signs, bias_negative
 
     if handle_biases == 'as_connections':
@@ -79,7 +79,9 @@ def convert_to_deep_rewireable(module: nn.Module, handle_biases="second_bias", a
     other_params = []
 
     def linear_forward(x, mod=module):
-        if handle_biases == 'as_connections':
+        if handle_biases == 'ignore':
+            return F.linear(x, F.relu(mod.weight) * mod.weight_signs, mod.bias)
+        elif handle_biases == 'as_connections':
             bias = F.relu(mod.bias) * mod.bias_signs if mod.bias is not None else None
             return F.linear(x, F.relu(mod.weight) * mod.weight_signs, bias)
         elif handle_biases == 'second_bias':
@@ -87,8 +89,16 @@ def convert_to_deep_rewireable(module: nn.Module, handle_biases="second_bias", a
             return F.linear(x, F.relu(mod.weight) * mod.weight_signs, bias)
 
     def conv2d_forward(x, mod=module):
-               
-        if handle_biases == 'as_connections':
+
+        if handle_biases == 'ignore':
+            if mod.padding_mode != 'zeros':
+                return F.conv2d(F.pad(x, mod._reversed_padding_repeated_twice, mode=mod.padding_mode),
+                                F.relu(mod.weight) * mod.weight_signs, mod.bias, mod.stride, _pair(0),
+                                mod.dilation, mod.groups)
+            return F.conv2d(x, F.relu(mod.weight) * mod.weight_signs, mod.bias, mod.stride,
+                            mod.padding, mod.dilation, mod.groups)
+ 
+        elif handle_biases == 'as_connections':
             bias = F.relu(mod.bias) * mod.bias_signs if mod.bias is not None else None
             if mod.padding_mode != 'zeros':
                 return F.conv2d(F.pad(x, mod._reversed_padding_repeated_twice, mode=mod.padding_mode),
@@ -111,16 +121,20 @@ def convert_to_deep_rewireable(module: nn.Module, handle_biases="second_bias", a
         register_params(module, weight_signs, bias_signs, bias_negative)
         module.forward = linear_forward
         sparse_params.extend([module.weight])
-        if module.bias is not None:
+        if module.bias is not None and handle_biases != 'ignore':
             sparse_params.extend([module.bias])
+        elif handle_biases == 'ignore':
+            other_params.extend([module.bias])
 
     elif isinstance(module, nn.Conv2d):
         weight_signs, bias_signs, bias_negative = get_signs(module, handle_biases, active_probability=active_probability, keep_signs=keep_signs)
         register_params(module, weight_signs, bias_signs, bias_negative)
         module.forward = conv2d_forward
         sparse_params.extend([module.weight])
-        if module.bias is not None:
+        if module.bias is not None and handle_biases != 'ignore':
             sparse_params.extend([module.bias])
+        elif handle_biases == 'ignore':
+            other_params.extend([module.bias])
 
     else:
         other_params.extend(module.parameters(recurse=False))
