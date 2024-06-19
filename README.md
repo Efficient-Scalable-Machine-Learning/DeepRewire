@@ -1,7 +1,15 @@
 # DeepRewire
-Some PyTorch stuff to easily create and optimize networks as in the Deep Rewiring paper (https://igi-web.tugraz.at/PDF/241.pdf).
-⚠️ Not completely sure if correctly implemented. Please double check everything.
-Run examples like `python -m examples.example1` from `src`.
+DeepRewire is a PyTorch-based project designed to simplify the creation and optimization of neural networks, implementing the concepts from the [Deep Rewiring](https://arxiv.org/abs/1711.05136) paper. ⚠️ Note: The implementation is still under development. Please double-check everything before use.
+
+## Overview
+
+DeepRewire provides tools to convert standard neural network parameters into a rewireable form that can be optimized using the DEEPR and SoftDEEPR algorithms. This allows for maintaining network sparsity during training.
+
+## Features
+
+- **Conversion Functions**: Convert networks to and from rewireable forms.
+- **Optimizers**: Use DEEPR and SoftDEEPR to optimize sparse networks.
+- **Examples**: Run provided examples to see the conversion and optimization in action.
 
 Usage example:
 ```python
@@ -21,55 +29,66 @@ convert_from_deep_rewireable(model)
 
 ## Functionality
 
-### Conversion
+### Conversion Functions
 
+#### convert_to_deep_rewireable
 ```python
 convert_to_deep_rewireable(module: nn.Module, handle_biases: str = "second_bias",
                            active_probability: float = None, keep_signs: bool = False)
 ```
-Using `convert_to_deep_rewireable` you can convert a PyTorch Module into a form that can be optimized by the `(Soft)DEEPR` algorithm.
-The function returns two lists. First a list of parameters that can be optimized with `(Soft)DEEPR` and then a list for which you can use any other optimizer.
+Converts a PyTorch module into a rewireable form.
 
-- `handle_biases` selects the strategy how to handle biases. You can currently choose between
-    - `ignore`: Ignores the bias as a parameter for `(Soft)DEEPR` and adds it to the list of other parameters
-    - `as_connections`: Just converts it as every other connection, randomly assigning one fixed sign
-    - `second_bias`: Splits it into two biases: one with negative and one with positive sign, such that it can be optimized by `(Soft)DEEPR` directly, without fixing the sign.
- 
-- `active_probability`: Sets the probability of an connection being initially active. Per default the connection is set to active based on the weights of the given module.
+- **Parameters**:
+    - `module` (nn.Module): The model to convert.
+    - `handle_biases` (str): Strategy to handle biases. Options are ignore, as_connections, and second_bias.
+    - `active_probability` (float): Initial active probability for connections.
+    - `keep_signs` (bool): Retain initial network signs for pretrained networks.
 
-- `keep_signs`: Keeps the initially given network functionally as is. This is interesting when using an already pretrained network.
-
+ #### convert_from_deep_rewireable
 ```python
 convert_from_deep_rewireable(module: nn.Module)
 ```
-Using `convert_from_deep_rewireable` you can convert a module from the rewireable form back into its initial form, where you can actually see its sparsity.
+Converts a rewireable module back into its original form, making its sparsity visible.
+
+- **Parameters**:
+    - `module` (nn.Module): The model to convert.
 
 ### Optimizers
+
+#### DEEPR
 ```python
 DEEPR(params, nc=required, lr, l1, reset_val, temp)
 ```
 The `DEEPR` algorithm keeps a fixed number of connections, which when becoming inactive, new connections are activated randomly to keep the same connectivity.
 
-- `nc` is the fixed number of connenections (parameters) that should be active. All other parameters will be inactive.
+- `nc` (int): Fixed number of active connections.
+- `lr` (float): Learning rate.
+- `l1` (float): L1 regularization term.
+- `reset_val` (float): Value for newly activated parameters.
+- `temp` (float): Temperature affecting noise magnitude.
 
-- `lr` is the learning rate.
-
-- `l1` is an l1 regularization term on the amplitude of a connection
-
-- `reset_val` is the value to which parameters are reset when being newly activated.
-
-- `temp` is the `tempreature` and will affect the magnitude of the added noise
-
+#### SoftDEEPR
 ```python
 SoftDEEPR(params, lr=0.05, l1=1e-5, temp=None, min_weight=None)
 ```
 
 The `SoftDEEPR` algorithm has no fixed amount of connections, but also adds noise to its inactive connections to randomly activate them.
 
-- `lr` is the learning rate.
+- `lr` (float): Learning rate.
 
-- `l1` is an l1 regularization term on the amplitude of a connection
+- `l1` (float): L1 regularization term.
 
-- `temp` is the `tempreature` and will affect the magnitude of the added noise
+- `temp` (float): Temperature affecting noise magnitude.
 
-- `min_weight` is the minimal value an inactive parameter can take on.
+- `min_weight` (float): Minimum value for inactive parameters.
+
+## Contributing
+Contributions are welcome! Please open an issue or submit a pull request for any improvements.
+
+## License
+This project is licensed under the MIT License.
+
+## Acknowledgements
+- Guillaume Bellec, David Kappel, Wolfgang Maass, Robert Legenstein for their work on Deep Rewiring.
+
+For more details, refer to the [Deep Rewiring paper](https://arxiv.org/abs/1711.05136).
