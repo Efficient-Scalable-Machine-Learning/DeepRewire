@@ -45,3 +45,31 @@ convert_from_deep_rewireable(module: nn.Module)
 Using `convert_from_deep_rewireable` you can convert a module from the rewireable form back into its initial form, where you can actually see its sparsity.
 
 ### Optimizers
+```python
+DEEPR(params, nc=required, lr, l1, reset_val, temp)
+```
+The `DEEPR` algorithm keeps a fixed number of connections, which when becoming inactive, new connections are activated randomly to keep the same connectivity.
+
+- `nc` is the fixed number of connenections (parameters) that should be active. All other parameters will be inactive.
+
+- `lr` is the learning rate.
+
+- `l1` is an l1 regularization term on the amplitude of a connection
+
+- `reset_val` is the value to which parameters are reset when being newly activated.
+
+- `temp` is the `tempreature` and will affect the magnitude of the added noise
+
+```python
+SoftDEEPR(params, lr=0.05, l1=1e-5, temp=None, min_weight=None)
+```
+
+The `SoftDEEPR` algorithm has no fixed amount of connections, but also adds noise to its inactive connections to randomly activate them.
+
+- `lr` is the learning rate.
+
+- `l1` is an l1 regularization term on the amplitude of a connection
+
+- `temp` is the `tempreature` and will affect the magnitude of the added noise
+
+- `min_weight` is the minimal value an inactive parameter can take on.
