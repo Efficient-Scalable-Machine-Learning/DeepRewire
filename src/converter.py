@@ -30,16 +30,17 @@ def register_params(module, weight_signs, bias_signs=None, bias_negative=None):
 
 
 def get_signs(module, handle_biases):
-    weight_signs = torch.randint(0, 2, size=module.weight.size(), dtype=module.weight.dtype) * 2 - 1
+    device = module.weight.device
+    weight_signs = torch.randint(0, 2, size=module.weight.size(), dtype=module.weight.dtype, device=device) * 2 - 1
     bias_signs = bias_negative = None
     if module.bias is None:
         return weight_signs, bias_signs, bias_negative
 
     if handle_biases == 'as_connections':
-        bias_signs = torch.randint(0, 2, size=module.bias.size(), dtype=module.bias.dtype) * 2 - 1
+        bias_signs = torch.randint(0, 2, size=module.bias.size(), dtype=module.bias.dtype, device=device) * 2 - 1
 
     elif handle_biases == 'second_bias':
-        bias_negative = -module.bias.detach().clone()
+        bias_negative = -module.bias.detach().clone().to(device)
         with torch.no_grad():
             mask = module.bias >= 0
             module.bias[mask] *= 2
@@ -87,13 +88,17 @@ def convert_to_deep_rewireable(module: nn.Module, handle_biases="second_bias"):
         weight_signs, bias_signs, bias_negative = get_signs(module, handle_biases)
         register_params(module, weight_signs, bias_signs, bias_negative)
         module.forward = linear_forward
-        sparse_params.extend([module.weight, module.bias])
+        sparse_params.extend([module.weight])
+        if module.bias is not None:
+            sparse_params.extend([module.bias])
 
     elif isinstance(module, nn.Conv2d):
         weight_signs, bias_signs, bias_negative = get_signs(module, handle_biases)
         register_params(module, weight_signs, bias_signs, bias_negative)
         module.forward = conv2d_forward
-        sparse_params.extend([module.weight, module.bias])
+        sparse_params.extend([module.weight])
+        if module.bias is not None:
+            sparse_params.extend([module.bias])
 
     else:
         other_params.extend(module.parameters(recurse=False))
