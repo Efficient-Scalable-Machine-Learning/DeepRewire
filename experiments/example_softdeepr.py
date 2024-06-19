@@ -22,7 +22,7 @@ class FCNN(nn.Module):
         self.fc2 = nn.Linear(512, 256)
         self.fc3 = nn.Linear(256, 10)
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.2)
+        self.dropout = nn.Dropout(0.9)
 
     def forward(self, x):
         x = x.view(-1, 28 * 28)  # Flatten the input tensor
@@ -57,9 +57,8 @@ if __name__ == '__main__':
 
     # Initialize the network, loss function, and optimizer
     model = FCNN()
-    print(get_compressed_model_size(model))
-    sparse_params, _ = convert_to_deep_rewireable(model)
     model.to(device)
+    sparse_params, _ = convert_to_deep_rewireable(model)
     criterion = nn.CrossEntropyLoss()
     optimizer = SoftDEEPR(sparse_params, lr=0.05, l1=1e-5)
 
@@ -106,17 +105,13 @@ if __name__ == '__main__':
         val_accuracies.append(val_accuracy)
 
         with torch.no_grad():
-            sparsity_model = copy.deepcopy(model)
-            convert_from_deep_rewireable(sparsity_model)
-            sparsities.append(measure_sparsity(sparsity_model.parameters())*100)
+            sparsities.append(measure_sparsity(model)*100)
 
         print(f'Epoch [{epoch + 1}/{num_epochs}], Train Loss: {train_losses[-1]:.4f}, Val Accuracy: {val_accuracies[-1]:.2f}%, Sparsity: {sparsities[-1]:.2f}%')
 
     # Testing the model
     convert_from_deep_rewireable(model)
-    print(get_compressed_model_size(model))
     sparsity = measure_sparsity(model.parameters())
-    print(sparsity)
     model.eval()
     with torch.no_grad():
         correct = 0
