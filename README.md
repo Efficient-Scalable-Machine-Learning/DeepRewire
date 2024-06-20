@@ -1,5 +1,5 @@
 # DeepRewire
-DeepRewire is a PyTorch-based project designed to simplify the creation and optimization of sparse neural networks with the concepts from the [Deep Rewiring](https://arxiv.org/abs/1711.05136) paper. ⚠️ Note: The implementation is still under development. Please double-check everything before use.
+DeepRewire is a PyTorch-based project designed to simplify the creation and optimization of sparse neural networks with the concepts from the [Deep Rewiring](https://arxiv.org/abs/1711.05136) paper by Bellec et. al. ⚠️ Note: The implementation is not made by any of the authors. Please double-check everything before use.
 
 ## Overview
 
@@ -49,15 +49,15 @@ convert_from_deep_rewireable(model)
 convert_to_deep_rewireable(module: nn.Module, handle_biases: str = "second_bias",
                            active_probability: float = None, keep_signs: bool = False)
 ```
-Converts a PyTorch module into a rewireable form.
+Converts a PyTorch module into a rewireable form.https://github.com/guillaumeBellec/deep_rewiring
 
 - **Parameters**:
     - `module` (nn.Module): The model to convert.
-    - `handle_biases` (str): Strategy to handle biases. Options are ignore, as_connections, and second_bias.
+    - `handle_biases` (str): Strategy to handle biases. Options are 'ignore', 'as_connections', and 'second_bias'.
     - `active_probability` (float): Probability for connections to be active right after conversion.
     - `keep_signs` (bool): Retain initial network signs for pretrained networks.
 
- #### convert_from_deep_rewireablehi, I remember I have a german language class today :face_with_spiral_eyes: , so. I couldn't join the dinner. see you tomorrow.
+ #### convert_from_deep_rewireable
 
 
 
@@ -107,4 +107,4 @@ This project is licensed under the MIT License.
 ## Acknowledgements
 - Guillaume Bellec, David Kappel, Wolfgang Maass, Robert Legenstein for their work on Deep Rewiring.
 
-For more details, refer to the [Deep Rewiring paper](https://arxiv.org/abs/1711.05136).
+For more details, refer to their [Deep Rewiring paper](https://arxiv.org/abs/1711.05136) or their [TensorFlow tutorial](https://github.com/guillaumeBellec/deep_rewiring).
