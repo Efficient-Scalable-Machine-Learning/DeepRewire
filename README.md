@@ -49,7 +49,7 @@ convert_from_deep_rewireable(model)
 convert_to_deep_rewireable(module: nn.Module, handle_biases: str = "second_bias",
                            active_probability: float = None, keep_signs: bool = False)
 ```
-Converts a PyTorch module into a rewireable form.
+Converts a PyTorch module into a rewireable form.https://github.com/guillaumeBellec/deep_rewiring
 
 - **Parameters**:
     - `module` (nn.Module): The model to convert.
@@ -107,4 +107,4 @@ This project is licensed under the MIT License.
 ## Acknowledgements
 - Guillaume Bellec, David Kappel, Wolfgang Maass, Robert Legenstein for their work on Deep Rewiring.
 
-For more details, refer to their [Deep Rewiring paper](https://arxiv.org/abs/1711.05136).
+For more details, refer to their [Deep Rewiring paper](https://arxiv.org/abs/1711.05136) or their [TensorFlow implementation](https://github.com/guillaumeBellec/deep_rewiring).
