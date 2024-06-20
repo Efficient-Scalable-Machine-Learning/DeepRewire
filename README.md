@@ -107,4 +107,4 @@ This project is licensed under the MIT License.
 ## Acknowledgements
 - Guillaume Bellec, David Kappel, Wolfgang Maass, Robert Legenstein for their work on Deep Rewiring.
 
-For more details, refer to the [Deep Rewiring paper](https://arxiv.org/abs/1711.05136).
+For more details, refer to their [Deep Rewiring paper](https://arxiv.org/abs/1711.05136).
