@@ -99,7 +99,7 @@ The `SoftDEEPR` algorithm has no fixed amount of connections, but also adds nois
 - `min_weight` (float): Minimum value for inactive parameters.
 
 ## Contributing
-Contributions are welcome! Please open an issue or submit a pull request for any improvements.
+Contributions are welcome! Please open an issue or submit a pull request for any improvements and fix my mistakes :D.
 
 ## License
 This project is licensed under the MIT License.
