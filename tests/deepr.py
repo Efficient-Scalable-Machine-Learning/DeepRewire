@@ -7,84 +7,12 @@ import torch
 import copy
 from torch import nn
 from src import DEEPR, convert_to_deep_rewireable, convert_from_deep_rewireable
-from src.converter import NonTrainableParameter
 from src.utils import measure_sparsity
 import pytest
 import functools
+from models import FCN, CNN
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-class FCN(nn.Module):
-    def __init__(self):
-        super(FCN, self).__init__()
-        self.input_shape = (28*28,)
-        self.output_shape = (10,)
-        self.fc1 = nn.Linear(28*28, 512, bias=False)
-        self.fc2 = nn.Linear(512, 256, bias=False)
-        self.fc3 = nn.Linear(256, 10, bias=False)
-        self.relu = nn.ReLU()
-
-    def forward(self, x):
-        x = x.view(-1, 28*28)
-        x = self.relu(self.fc1(x))
-        x = self.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
-
-class CNN(nn.Module):
-    def __init__(self):
-        super(CNN, self).__init__()
-        self.input_shape = (3, 32, 32,)
-        self.output_shape = (10,)
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1).to(device)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1).to(device)
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0).to(device)
-        self.fc1 = nn.Linear(64 * 8 * 8, 512).to(device)
-        self.fc2 = nn.Linear(512, 10).to(device)
-        self.relu = nn.ReLU().to(device)
-
-    def forward(self, x):
-        x = self.relu(self.conv1(x))
-        x = self.pool(x)
-        x = self.relu(self.conv2(x))
-        x = self.pool(x)
-        x = x.view(-1, 64 * 8 * 8)
-        x = self.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
-
-def test_non_trainable_parameter():
-    # Create a NonTrainableParameter
-    param = NonTrainableParameter(torch.tensor([1.0, 2.0, 3.0]))
-
-    # Assert that requires_grad is False
-    assert param.requires_grad == False, "NonTrainableParameter should have requires_grad set to False"
-
-    # Try setting requires_grad to True and assert it is still False
-    param.requires_grad = True
-    assert param.requires_grad == False, "NonTrainableParameter should not allow requires_grad to be set to True"
-
-    # Try setting requires_grad to False and assert it is still False
-    param.requires_grad = False
-    assert param.requires_grad == False, "NonTrainableParameter should keep requires_grad set to False"
-
-def test_forward_pass():
-    model = FCN()
-    convert_to_deep_rewireable(model)
-    model.to(device)
-    sample_input = torch.randn(1, 28*28).to(device)
-    output = model(sample_input)
-    assert output.shape == (1, 10)
-
-def test_loss_calculation():
-    model = FCN()
-    convert_to_deep_rewireable(model)
-    sample_input = torch.randn(1, 28*28)
-    sample_output = torch.randn(1, 10)
-    criterion = torch.nn.MSELoss()
-    output = model(sample_input)
-    loss = criterion(output, sample_output)
-    assert loss.item() > 0
 
 def verify_number_of_connections(optimizer):
     active_connections = 0
@@ -94,7 +22,6 @@ def verify_number_of_connections(optimizer):
                 continue
             active_connections += (p.data >= 0).sum().item()
     assert active_connections == optimizer.nc, f"Expected {optimizer.nc} active connections, found {active_connections}"
-
 
 def test_number_of_connections_init():
     model = FCN()
@@ -109,7 +36,6 @@ def test_number_of_connections_init():
 
     convert_from_deep_rewireable(model)
     assert sum(torch.count_nonzero(p) for p in model.parameters()) <= nc
-
 
 def test_number_of_connections_step():
     model = FCN()

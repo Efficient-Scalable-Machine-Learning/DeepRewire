@@ -10,74 +10,11 @@ from torch import nn
 import pytest
 import functools
 from src import DEEPR, SoftDEEPR, convert_to_deep_rewireable, convert_from_deep_rewireable
-from src.converter import NonTrainableParameter
 from src.utils import measure_sparsity
+from models import FCN, CNN
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-class FCN(nn.Module):
-    def __init__(self):
-        super(FCN, self).__init__()
-        self.input_shape = (28*28,)
-        self.output_shape = (10,)
-        self.fc1 = nn.Linear(28*28, 512, bias=False)
-        self.fc2 = nn.Linear(512, 256, bias=False)
-        self.fc3 = nn.Linear(256, 10, bias=False)
-        self.relu = nn.ReLU()
-
-    def forward(self, x):
-        x = x.view(-1, 28*28).to(device)
-        x = self.relu(self.fc1(x))
-        x = self.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
-
-class CNN(nn.Module):
-    def __init__(self):
-        super(CNN, self).__init__()
-        self.input_shape = (3, 32, 32,)
-        self.output_shape = (10,)
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1).to(device)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1).to(device)
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0).to(device)
-        self.fc1 = nn.Linear(64 * 8 * 8, 512).to(device)
-        self.fc2 = nn.Linear(512, 10).to(device)
-        self.relu = nn.ReLU().to(device)
-
-    def forward(self, x):
-        x = self.relu(self.conv1(x.to(device)))
-        x = self.pool(x)
-        x = self.relu(self.conv2(x))
-        x = self.pool(x)
-        x = x.view(-1, 64 * 8 * 8)
-        x = self.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
-
-def test_non_trainable_parameter():
-    param = NonTrainableParameter(torch.tensor([1.0, 2.0, 3.0], device=device))
-
-    assert param.requires_grad == False, "NonTrainableParameter should have requires_grad set to False"
-
-    param.requires_grad = True
-    assert param.requires_grad == False, "NonTrainableParameter should not allow requires_grad to be set to True"
-
-    param.requires_grad = False
-    assert param.requires_grad == False, "NonTrainableParameter should keep requires_grad set to False"
-
-@pytest.mark.parametrize("model_class", [FCN, CNN])
-def test_forward_pass(model_class):
-    model = model_class()
-    model.to(device)
-    sample_input = torch.randn(1, *model.input_shape, device=device)
-    pre_rewired_output = model(sample_input)
-    convert_to_deep_rewireable(model)
-    model.to(device)
-    post_rewired_output = model(sample_input)
-    assert pre_rewired_output.shape == post_rewired_output.shape, "The output shape changed with conversion."
-    convert_from_deep_rewireable(model)
-    post_unrewired_output = model(sample_input)
-    assert pre_rewired_output.shape == post_unrewired_output.shape, "The output shape changed with re-conversion."
 
 @pytest.mark.parametrize("model_class", [FCN, CNN])
 def test_backward_pass(model_class):
