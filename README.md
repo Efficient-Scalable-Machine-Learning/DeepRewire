@@ -3,7 +3,7 @@ DeepRewire is a PyTorch-based project designed to simplify the creation and opti
 
 ## Overview
 
-DeepRewire provides tools to convert standard neural network parameters into a rewireable form that can be optimized using the DEEPR and SoftDEEPR algorithms. This allows for maintaining network sparsity during training.
+DeepRewire provides tools to convert standard neural network parameters into a rewireable form that can be optimized using the DEEPR and SoftDEEPR algorithms. This allows for gaining network sparsity during training.
 
 ## Features
 
@@ -57,7 +57,10 @@ Converts a PyTorch module into a rewireable form.
     - `active_probability` (float): Probability for connections to be active right after conversion.
     - `keep_signs` (bool): Retain initial network signs for pretrained networks.
 
- #### convert_from_deep_rewireable
+ #### convert_from_deep_rewireablehi, I remember I have a german language class today :face_with_spiral_eyes: , so. I couldn't join the dinner. see you tomorrow.
+
+
+
 ```python
 convert_from_deep_rewireable(module: nn.Module)
 ```
