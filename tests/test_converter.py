@@ -52,7 +52,6 @@ class CNN(nn.Module):
         x = self.fc2(x)
         return x
 
-
 @pytest.mark.parametrize("model_class", [FCN, CNN])
 def test_parameters(model_class):
     rewired_model = model_class()
@@ -69,20 +68,46 @@ def test_parameters(model_class):
     s2 = measure_sparsity(standard_model.parameters())
     assert s1 > s2
 
-@pytest.mark.parametrize("model_class", [FCN])
-def test_parameters(model_class):
+@pytest.mark.parametrize("model_class", [FCN, CNN])
+@pytest.mark.parametrize("handle_biases", ['ignore', 'as_connections', 'second_bias'])
+def test_reconversion(model_class, handle_biases):
     for i in range(10):
         with torch.no_grad():
             model = model_class()
             model.eval()
-
-            convert_to_deep_rewireable(model)
-
+            convert_to_deep_rewireable(model, handle_biases=handle_biases)
             inpt = torch.rand((1, *model.input_shape))
             out_pre_reconversion = model(inpt)
-
             convert_from_deep_rewireable(model)
-
             out_post_reconversion = model(inpt)
-
         assert torch.equal(out_pre_reconversion, out_post_reconversion)
+
+
+@pytest.mark.parametrize("model_class", [FCN, CNN])
+@pytest.mark.parametrize("handle_biases", ['ignore', 'as_connections', 'second_bias'])
+def test_conversion(model_class, handle_biases):
+    for i in range(10):
+        with torch.no_grad():
+            model = model_class()
+            model.eval()
+            inpt = torch.rand((1, *model.input_shape))
+            out_pre_conversion = model(inpt)
+            convert_to_deep_rewireable(model, handle_biases=handle_biases, keep_signs=True)
+            out_post_conversion = model(inpt)
+        assert torch.equal(out_pre_conversion, out_post_conversion)
+
+
+@pytest.mark.parametrize("model_class", [FCN, CNN])
+@pytest.mark.parametrize("handle_biases", ['ignore', 'as_connections', 'second_bias'])
+def test_active_probability(model_class, handle_biases):
+    for s in range(11):
+        connectivity = 1 - s / 10
+        sparsities = []
+        for i in range(20):
+            with torch.no_grad():
+                model = model_class()
+                convert_to_deep_rewireable(model, handle_biases=handle_biases, active_probability=connectivity)
+                convert_from_deep_rewireable(model)
+                sparsities.append(measure_sparsity(model.parameters()))
+        sparsity = sum(sparsities)/len(sparsities)
+        assert pytest.approx(connectivity, abs=0.001) == 1.0 - sparsity

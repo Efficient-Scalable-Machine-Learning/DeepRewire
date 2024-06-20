@@ -49,12 +49,13 @@ def get_signs(module, handle_biases, active_probability=None, keep_signs=False):
 
     if handle_biases == 'as_connections':
         if keep_signs:
-            weight_signs = torch.where(module.bias >= 0, 1, -1)
+            bias_signs = torch.where(module.bias >= 0, 1, -1)
+            module.bias = nn.Parameter(torch.abs(module.bias))
         else:
             bias_signs = torch.randint(0, 2, size=module.bias.size(), dtype=module.bias.dtype, device=device) * 2 - 1
         
         if active_probability is not None:
-            b = torch.abs(module.weight)
+            b = torch.abs(module.bias)
             active_tensor = torch.bernoulli(torch.full(b.size(), active_probability, device=device)) * 2 - 1
             module.bias = nn.Parameter(b*active_tensor)
 
@@ -62,8 +63,8 @@ def get_signs(module, handle_biases, active_probability=None, keep_signs=False):
         bias_negative = -module.bias.detach().clone().to(device)
         with torch.no_grad():
             mask = module.bias >= 0
-            module.bias[mask] *= 2
-            bias_negative[~mask] *= 2
+            module.bias[~mask] *= 2
+            bias_negative[mask] *= 2
 
     return weight_signs, bias_signs, bias_negative
 
