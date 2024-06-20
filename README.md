@@ -1,5 +1,5 @@
 # DeepRewire
-DeepRewire is a PyTorch-based project designed to simplify the creation and optimization of sparse neural networks with the concepts from the [Deep Rewiring](https://arxiv.org/abs/1711.05136) paper. ⚠️ Note: The implementation is still under development. Please double-check everything before use.
+DeepRewire is a PyTorch-based project designed to simplify the creation and optimization of sparse neural networks with the concepts from the [Deep Rewiring](https://arxiv.org/abs/1711.05136) paper by Bellec et. al. ⚠️ Note: The implementation is still under development. Please double-check everything before use.
 
 ## Overview
 
