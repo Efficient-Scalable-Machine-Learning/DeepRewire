@@ -109,6 +109,6 @@ Contributions are welcome! Please open an issue or submit a pull request for any
 This project is licensed under the MIT License.
 
 ## Acknowledgements
-- Guillaume Bellec, David Kappel, Wolfgang Maass, Robert Legenstein for their work on Deep Rewiring.
+- Guillaume Bellec, David Kappel, Wolfgang Maass, Robert Legenstein for their paper on Deep Rewiring.
 
 For more details, refer to their [Deep Rewiring paper](https://arxiv.org/abs/1711.05136) or their [TensorFlow tutorial](https://github.com/guillaumeBellec/deep_rewiring).
