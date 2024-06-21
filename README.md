@@ -38,7 +38,7 @@ optim2 = torch.optim.SGD(other_params, lr=0.05) # Optional, for parameters that 
 
 # Convert back to standard form
 reconvert(model)
-# Model has the same parameters but is now sparse.
+# Model has the same parameters but is now (hopefully) sparse.
 ```
 
 ![SoftDEEPR Performance](https://github.com/LuggiStruggi/DeepRewire/blob/main/images/mnist_softdeepr3.svg)
