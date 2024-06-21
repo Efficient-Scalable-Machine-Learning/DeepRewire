@@ -16,8 +16,7 @@ class FCNN(nn.Module):
         self.fc2 = nn.Linear(300, 100)
         self.fc3 = nn.Linear(100, 10)
         self.relu = nn.ReLU()
-        #self.dropout = nn.Dropout(0.2)
-
+        
     def forward(self, x):
         x = x.view(-1, 28 * 28)
         x = self.relu(self.fc1(x))
