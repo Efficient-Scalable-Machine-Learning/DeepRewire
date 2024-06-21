@@ -50,7 +50,7 @@ if __name__ == '__main__':
     model = FCNN()
     model.to(device)
 
-    sparse_params, _ = convert_to_deep_rewireable(model, active_probability=0.1, keep_signs=False, handle_biases='ignore')
+    sparse_params, _ = convert_to_deep_rewireable(model, active_probability=0.1)
     criterion = nn.CrossEntropyLoss()
     optimizer = SoftDEEPR(sparse_params, lr=0.05, l1=1e-5)
 
