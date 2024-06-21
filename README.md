@@ -28,7 +28,7 @@ model = torch.nn.Sequential(
 )
 
 # Convert model parameters to rewireable form
-rewireable_params, other_params = convert_to_deep_rewireable(model)
+rewireable_params, other_params = convert(model)
 
 # Define optimizers
 optim1 = SoftDEEPR(rewireable_params, lr=0.05, l1=1e-5) 
@@ -37,7 +37,7 @@ optim2 = torch.optim.SGD(other_params, lr=0.05) # Optional, for parameters that 
 # ... Standard training loop ...
 
 # Convert back to standard form
-convert_from_deep_rewireable(model)
+reconvert(model)
 # Model has the same parameters but is now sparse.
 ```
 
