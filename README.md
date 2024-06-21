@@ -41,7 +41,7 @@ convert_from_deep_rewireable(model)
 # Model has the same parameters but is now sparse.
 ```
 
-![SoftDEEPR Performance](https://github.com/LuggiStruggi/DeepRewire/blob/main/images/mnist_softdeepr2.svg)
+![SoftDEEPR Performance](https://github.com/LuggiStruggi/DeepRewire/blob/main/images/mnist_softdeepr3.svg)
 
 
 ## Functionality

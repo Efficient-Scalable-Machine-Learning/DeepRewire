@@ -12,18 +12,16 @@ import os
 class FCNN(nn.Module):
     def __init__(self):
         super(FCNN, self).__init__()
-        self.fc1 = nn.Linear(28 * 28, 512)
-        self.fc2 = nn.Linear(512, 256)
-        self.fc3 = nn.Linear(256, 10)
+        self.fc1 = nn.Linear(28 * 28, 300)
+        self.fc2 = nn.Linear(300, 100)
+        self.fc3 = nn.Linear(100, 10)
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.2)
+        #self.dropout = nn.Dropout(0.2)
 
     def forward(self, x):
         x = x.view(-1, 28 * 28)
         x = self.relu(self.fc1(x))
-        x = self.dropout(x)
         x = self.relu(self.fc2(x))
-        x = self.dropout(x)
         x = self.fc3(x)
         return x
 
@@ -50,7 +48,7 @@ if __name__ == '__main__':
     model = FCNN()
     model.to(device)
 
-    sparse_params, _ = convert(model, active_probability=0.1)
+    sparse_params, _ = convert(model, active_probability=0.05)
     criterion = nn.CrossEntropyLoss()
     optimizer = SoftDEEPR(sparse_params, lr=0.05, l1=1e-5)
 
