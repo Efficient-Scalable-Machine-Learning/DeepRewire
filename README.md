@@ -48,7 +48,7 @@ reconvert(model)
 
 ### Conversion Functions
 
-#### convert_to_deep_rewireable
+#### convert
 ```python
 deep_rewire.convert(module: nn.Module, handle_biases: str = "second_bias",
                            active_probability: float = None, keep_signs: bool = False)
@@ -61,7 +61,7 @@ Converts a PyTorch module into a rewireable form.
     - `active_probability` (float): Probability for connections to be active right after conversion.
     - `keep_signs` (bool): Retain initial network signs and start with all connections active (for pretrained networks).
 
- #### convert_from_deep_rewireable
+ #### reconvert
 
 
 
