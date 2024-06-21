@@ -53,7 +53,7 @@ convert_from_deep_rewireable(model)
 convert_to_deep_rewireable(module: nn.Module, handle_biases: str = "second_bias",
                            active_probability: float = None, keep_signs: bool = False)
 ```
-Converts a PyTorch module into a rewireable form.https://github.com/guillaumeBellec/deep_rewiring
+Converts a PyTorch module into a rewireable form.
 
 - **Parameters**:
     - `module` (nn.Module): The model to convert.
