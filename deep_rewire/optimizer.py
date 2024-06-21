@@ -150,9 +150,6 @@ class DEEPR(Optimizer):
                 idx_counter += p.data.numel()
 
         # look how many connections are inactive and activate if necessary.
-        # This is done by randomly sampling any index and trying.
-        # If we assume a sparse network this should work better than
-        # saving the active or inactive indices beforehand.
         diff = self.nc - active_connections
         while diff > 0:
             candidate_indices = torch.randint(low=0, high=self.n_parameters, size=(diff,))
