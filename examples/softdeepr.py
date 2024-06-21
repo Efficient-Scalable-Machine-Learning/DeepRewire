@@ -1,8 +1,8 @@
 import torch
 import copy
 from torch import nn
-from src import SoftDEEPR, convert_to_deep_rewireable, convert_from_deep_rewireable
-from src.utils import measure_sparsity, get_compressed_model_size
+from deep_rewire import SoftDEEPR, convert, reconvert
+from deep_rewire.utils import measure_sparsity
 import torchvision
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
@@ -50,7 +50,7 @@ if __name__ == '__main__':
     model = FCNN()
     model.to(device)
 
-    sparse_params, _ = convert_to_deep_rewireable(model, active_probability=0.1)
+    sparse_params, _ = convert(model, active_probability=0.1)
     criterion = nn.CrossEntropyLoss()
     optimizer = SoftDEEPR(sparse_params, lr=0.05, l1=1e-5)
 
@@ -97,7 +97,7 @@ if __name__ == '__main__':
 
         print(f'Epoch [{epoch + 1}/{num_epochs}], Train Loss: {train_losses[-1]:.4f}, Val Accuracy: {val_accuracies[-1]:.2f}%, Sparsity: {sparsities[-1]:.2f}%')
 
-    convert_from_deep_rewireable(model)
+    reconvert(model)
     sparsity = measure_sparsity(model.parameters())
     model.eval()
     with torch.no_grad():

@@ -9,8 +9,8 @@ import torch
 from torch import nn
 import pytest
 import functools
-from src import DEEPR, SoftDEEPR, convert_to_deep_rewireable, convert_from_deep_rewireable
-from src.utils import measure_sparsity
+from deep_rewire import DEEPR, SoftDEEPR, convert, reconvert
+from deep_rewire.utils import measure_sparsity
 from models import FCN, CNN
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -19,7 +19,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 @pytest.mark.parametrize("model_class", [FCN, CNN])
 def test_backward_pass(model_class):
     model = model_class()
-    convert_to_deep_rewireable(model)
+    convert(model)
     model.to(device)
     sample_input = torch.randn(1, *model.input_shape, device=device)
     sample_output = torch.randn(1, *model.output_shape, device=device)
@@ -49,7 +49,7 @@ def test_backward_pass(model_class):
 @pytest.mark.parametrize("model_class", [FCN, CNN])
 def test_overfitting_small_batch(model_class):
     model = model_class()
-    convert_to_deep_rewireable(model)
+    convert(model)
     model.to(device)
     criterion = torch.nn.MSELoss()
     optimizer = SoftDEEPR(model.parameters(), lr=0.6, l1=0.0005)
@@ -64,7 +64,7 @@ def test_overfitting_small_batch(model_class):
         loss.backward()
         optimizer.step()
     
-    convert_from_deep_rewireable(model)
+    reconvert(model)
     assert measure_sparsity(model.parameters()) > 0.7, "SoftDEEPR produced a model which is not sparse enough (below 70%)"
     assert loss.item() < 0.05, "SoftDEEPR couldn't fit the input to the output."
 
@@ -109,7 +109,7 @@ def test_training_time():
     regular_time = profile_optimizer(optimizer, model, criterion)
 
     model = FCN()
-    convert_to_deep_rewireable(model)
+    convert(model)
     model.to(device)
     optimizer = SoftDEEPR(model.parameters(), lr=0.5, l1=0.0005)
     

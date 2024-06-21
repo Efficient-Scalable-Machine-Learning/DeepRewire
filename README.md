@@ -18,7 +18,7 @@ Install using `pip install deep_rewire`
 ## Example Usage:
 ```python
 import torch
-from deep_rewire import convert_to_deep_rewireable, convert_from_deep_rewireable, SoftDEEPR
+from deep_rewire import convert, reconvert, SoftDEEPR
 
 # Define your model
 model = torch.nn.Sequential(
@@ -50,7 +50,7 @@ convert_from_deep_rewireable(model)
 
 #### convert_to_deep_rewireable
 ```python
-convert_to_deep_rewireable(module: nn.Module, handle_biases: str = "second_bias",
+deep_rewire.convert(module: nn.Module, handle_biases: str = "second_bias",
                            active_probability: float = None, keep_signs: bool = False)
 ```
 Converts a PyTorch module into a rewireable form.
@@ -66,7 +66,7 @@ Converts a PyTorch module into a rewireable form.
 
 
 ```python
-convert_from_deep_rewireable(module: nn.Module)
+deep_rewire.reconvert(module: nn.Module)
 ```
 Converts a rewireable module back into its original form, making its sparsity visible.
 
@@ -77,7 +77,7 @@ Converts a rewireable module back into its original form, making its sparsity vi
 
 #### DEEPR
 ```python
-DEEPR(params, nc=required, lr, l1, reset_val, temp)
+deep_rewire.DEEPR(params, nc=required, lr, l1, reset_val, temp)
 ```
 The `DEEPR` algorithm keeps a fixed number of connections, which when becoming inactive, new connections are activated randomly to keep the same connectivity.
 
@@ -89,7 +89,7 @@ The `DEEPR` algorithm keeps a fixed number of connections, which when becoming i
 
 #### SoftDEEPR
 ```python
-SoftDEEPR(params, lr=0.05, l1=1e-5, temp=None, min_weight=None)
+deep_rewire.SoftDEEPR(params, lr=0.05, l1=1e-5, temp=None, min_weight=None)
 ```
 
 The `SoftDEEPR` algorithm has no fixed amount of connections, but also adds noise to its inactive connections to randomly activate them.

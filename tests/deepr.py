@@ -6,8 +6,8 @@ import time
 import torch
 import copy
 from torch import nn
-from src import DEEPR, convert_to_deep_rewireable, convert_from_deep_rewireable
-from src.utils import measure_sparsity
+from deep_rewire import DEEPR, convert, reconvert
+from deep_rewire.utils import measure_sparsity
 import pytest
 import functools
 from models import FCN, CNN
@@ -27,21 +27,21 @@ def test_number_of_connections_init():
     model = FCN()
     param_total = sum(p.numel() for p in model.parameters())
     nc = int(param_total * 0.3)
-    convert_to_deep_rewireable(model)
+    convert(model)
     sample_input = torch.randn(1, *model.input_shape)
     sample_output = torch.randn(1, *model.output_shape)
     criterion = torch.nn.MSELoss()
     optimizer = DEEPR(model.parameters(), nc=nc, lr=0.05, l1=0.005)
     verify_number_of_connections(optimizer)
 
-    convert_from_deep_rewireable(model)
+    reconvert(model)
     assert sum(torch.count_nonzero(p) for p in model.parameters()) <= nc
 
 def test_number_of_connections_step():
     model = FCN()
     param_total = sum(p.numel() for p in model.parameters())
     nc = int(param_total * 0.3)
-    convert_to_deep_rewireable(model)
+    convert(model)
     model.to(device)
     sample_input = torch.randn(1, *model.input_shape).to(device)
     sample_output = torch.randn(1, *model.output_shape).to(device)
@@ -53,7 +53,7 @@ def test_number_of_connections_step():
     loss.backward()
     optimizer.step()
     verify_number_of_connections(optimizer)
-    convert_from_deep_rewireable(model)
+    reconvert(model)
     assert sum(torch.count_nonzero(p) for p in model.parameters() ) <= nc
  
 
@@ -63,7 +63,7 @@ def test_backward_pass(model_class):
     param_total = sum(p.numel() for p in model.parameters())
     sparsity = 0.7
     nc = int(param_total * (1 - sparsity))
-    convert_to_deep_rewireable(model)
+    convert(model)
     model.to(device)
     sample_input = torch.randn(1, *model.input_shape).to(device)
     sample_output = torch.randn(1, *model.output_shape).to(device)
@@ -89,7 +89,7 @@ def test_parameter_updates(model_class):
     sparsity = 0.7
     nc = int(param_total * (1 - sparsity))
  
-    convert_to_deep_rewireable(model)
+    convert(model)
     model.to(device)
     sample_input = torch.randn(1, *model.input_shape).to(device)
     sample_output = torch.randn(1, *model.output_shape).to(device)
@@ -115,7 +115,7 @@ def test_overfitting_small_batch(model_class):
     param_total = sum(p.numel() for p in model.parameters())
     sparsity = 0.7
     nc = int(param_total * (1 - sparsity))
-    convert_to_deep_rewireable(model)
+    convert(model)
     model.to(device)
     criterion = torch.nn.MSELoss()
     optimizer = DEEPR(model.parameters(), nc=nc, lr=0.6, l1=0.0005)
@@ -130,7 +130,7 @@ def test_overfitting_small_batch(model_class):
         loss.backward()
         optimizer.step()
     
-    convert_from_deep_rewireable(model)
+    reconvert(model)
     assert measure_sparsity(model.parameters()) > sparsity
     assert loss.item() < 0.05
 
@@ -184,7 +184,7 @@ def test_training_time():
     sparsity = 0.9
     nc = int(param_total * (1 - sparsity))
 
-    convert_to_deep_rewireable(model)
+    convert(model)
     model.to(device)
     optimizer = DEEPR(model.parameters(), nc=nc, lr=0.5, l1=0.0005)
     

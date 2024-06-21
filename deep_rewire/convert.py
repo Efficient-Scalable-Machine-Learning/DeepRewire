@@ -69,7 +69,7 @@ def get_signs(module, handle_biases, active_probability=None, keep_signs=False):
     return weight_signs, bias_signs, bias_negative
 
 
-def convert_to_deep_rewireable(module: nn.Module, handle_biases="second_bias", active_probability=None, keep_signs=False):
+def convert(module: nn.Module, handle_biases="second_bias", active_probability=None, keep_signs=False):
     """Change the forward pass of a standard network to the rewire-forward pass.
        First returns params to be optimized by specific opimizer and then other paramteters"""
 
@@ -141,7 +141,7 @@ def convert_to_deep_rewireable(module: nn.Module, handle_biases="second_bias", a
         other_params.extend(module.parameters(recurse=False))
 
     for _, submodule in module.named_children():
-        sparse_p, other_p = convert_to_deep_rewireable(submodule, handle_biases=handle_biases, active_probability=active_probability, keep_signs=keep_signs)
+        sparse_p, other_p = convert(submodule, handle_biases=handle_biases, active_probability=active_probability, keep_signs=keep_signs)
         sparse_params.extend(sparse_p)
         other_params.extend(other_p)
 
@@ -205,7 +205,7 @@ def forward_to_standard(module: nn.Module):
         forward_to_standard(submodule)
 
 
-def convert_from_deep_rewireable(module: nn.Module):
+def reconvert(module: nn.Module):
     """Convert a rewireable network to the structure of a standard network"""
     merge_back(module)
     forward_to_standard(module)
