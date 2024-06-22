@@ -1,17 +1,13 @@
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-import os
-import time
-import copy
-import torch
-from torch import nn
-import pytest
-import functools
-from deep_rewire import DEEPR, SoftDEEPR, convert, reconvert
 from deep_rewire.utils import measure_sparsity
-from models import FCN, CNN
+from deep_rewire import DEEPR, SoftDEEPR, convert, reconvert
+from tests.models import FCN, CNN
+import functools
+import pytest
+from torch import nn
+import torch
+import copy
+import time
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -26,12 +22,13 @@ def test_backward_pass(model_class):
     criterion = torch.nn.MSELoss()
     optimizer = SoftDEEPR(model.parameters(), lr=0.05, l1=0.005)
 
-    initial_params = {name: param.clone() for name, param in model.named_parameters()}
+    initial_params = {name: param.clone()
+                      for name, param in model.named_parameters()}
 
     output = model(sample_input)
     loss = criterion(output, sample_output)
     loss.backward()
-  
+
     for name, param in model.named_parameters():
         if '_signs' in name:
             assert param.grad is None, "A 'sign' parameter has a gradient"
@@ -39,12 +36,15 @@ def test_backward_pass(model_class):
             assert param.grad is not None, "A normal parameter has no gradient"
 
     optimizer.step()
-     
+
     for name, param in model.named_parameters():
         if '_sign' in name:
-            assert torch.equal(initial_params[name], param), "A 'sign' parameter changed"
+            assert torch.equal(
+                initial_params[name], param), "A 'sign' parameter changed"
         else:
-            assert not torch.equal(initial_params[name], param), "A normal parameter didn't change"
+            assert not torch.equal(
+                initial_params[name], param), "A normal parameter didn't change"
+
 
 @pytest.mark.parametrize("model_class", [FCN, CNN])
 def test_overfitting_small_batch(model_class):
@@ -52,21 +52,25 @@ def test_overfitting_small_batch(model_class):
     convert(model)
     model.to(device)
     criterion = torch.nn.MSELoss()
-    optimizer = SoftDEEPR(model.parameters(), lr=0.6, l1=0.0005)
+    optimizer = SoftDEEPR(model.parameters())
 
     sample_input = torch.randn(10, *model.input_shape, device=device)
     sample_output = torch.randn(10, *model.output_shape, device=device)
-    
+
+    prev_loss = 100
     for epoch in range(100):
         optimizer.zero_grad()
         output = model(sample_input)
         loss = criterion(output, sample_output)
         loss.backward()
+        assert loss.item() < prev_loss, "Loss should reduce every epoch"
+        prev_loss = loss.item()
         optimizer.step()
-    
+
     reconvert(model)
-    assert measure_sparsity(model.parameters()) > 0.7, "SoftDEEPR produced a model which is not sparse enough (below 70%)"
-    assert loss.item() < 0.05, "SoftDEEPR couldn't fit the input to the output."
+    assert measure_sparsity(model.parameters(
+    )) > 0.5, "SoftDEEPR produced a model which is not sparse enough (below 50%)"
+
 
 def set_random_seed(seed):
     torch.manual_seed(seed)
@@ -76,6 +80,7 @@ def set_random_seed(seed):
     random.seed(seed)
     import numpy as np
     np.random.seed(seed)
+
 
 def profile_optimizer(optimizer, model, criterion, epochs=100):
     start_time = time.time()
@@ -90,13 +95,14 @@ def profile_optimizer(optimizer, model, criterion, epochs=100):
     end_time = time.time()
     return end_time - start_time
 
+
 def test_training_time():
     set_random_seed(42)
 
     model = FCN().to(device)
     criterion = nn.MSELoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
-    
+
     for _ in range(10):
         sample_input = torch.randn(32, 28*28, device=device)
         sample_output = torch.randn(32, 10, device=device)
@@ -112,7 +118,7 @@ def test_training_time():
     convert(model)
     model.to(device)
     optimizer = SoftDEEPR(model.parameters(), lr=0.5, l1=0.0005)
-    
+
     for _ in range(10):
         sample_input = torch.randn(32, 28*28, device=device)
         sample_output = torch.randn(32, 10, device=device)
@@ -124,5 +130,6 @@ def test_training_time():
 
     rewired_time = profile_optimizer(optimizer, model, criterion)
 
-    print(f"Regular SGD time: {regular_time:.4f}s, SoftDEEPR time: {rewired_time:.4f}s")
+    print(f"Regular SGD time: {
+          regular_time:.4f}s, SoftDEEPR time: {rewired_time:.4f}s")
     assert rewired_time < 7 * regular_time

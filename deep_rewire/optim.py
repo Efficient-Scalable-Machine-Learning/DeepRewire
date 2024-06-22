@@ -5,10 +5,12 @@ The optimizers for the rewiring network
 import torch
 from torch.optim.optimizer import Optimizer, required
 
+
 class DEEPR(Optimizer):
     """
     Deep-rewiring oftimizer with hard constraint on number of connections
     """
+
     def __init__(self, params, nc=required, lr=0.05, l1=1e-4, reset_val=0.0, temp=None):
         if lr < 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")
@@ -36,25 +38,26 @@ class DEEPR(Optimizer):
                 self.n_parameters += p.numel()
 
         if self.nc > self.n_parameters:
-            raise ValueError("Number of connections can't be bigger than number"+
-                            f"of parameters: nc:{nc} np:{self.n_parameters}")
+            raise ValueError("Number of connections can't be bigger than number" +
+                             f"of parameters: nc:{nc} np:{self.n_parameters}")
 
-        activate_indices = self.sample_unique_indices(self.nc, self.n_parameters)
+        activate_indices = self.sample_unique_indices(
+            self.nc, self.n_parameters)
         self.init_activation(activate_indices)
-
 
     def sample_unique_indices(self, length, max_int):
         if length > max_int:
-            raise ValueError("Cannot sample more unique indices than the size of the range.")
-        
+            raise ValueError(
+                "Cannot sample more unique indices than the size of the range.")
+
         selected_indices = set()
-        
+
         while len(selected_indices) < length:
-            new_indices = torch.randint(0, max_int, (length - len(selected_indices),))
+            new_indices = torch.randint(
+                0, max_int, (length - len(selected_indices),))
             selected_indices.update(new_indices.tolist())
 
         return torch.tensor(list(selected_indices))
-
 
     def init_activation(self, activate_indices):
         """
@@ -66,24 +69,25 @@ class DEEPR(Optimizer):
             for p in group['params']:
                 if not p.requires_grad:
                     continue
-                
+
                 num_elements = p.data.numel()
 
                 p.data = -torch.abs(p.data)
-                
+
                 p_data_flat = p.data.view(-1)
-                
+
                 in_current_param_mask = remaining_indices < num_elements
                 current_indices = remaining_indices[in_current_param_mask]
-                
+
                 if current_indices.numel() > 0:
                     p_data_flat[current_indices] *= -1
-                    p_data_flat[current_indices] = torch.clamp(p_data_flat[current_indices], min=group['reset_val'])
-                    
+                    p_data_flat[current_indices] = torch.clamp(
+                        p_data_flat[current_indices], min=group['reset_val'])
+
                     remaining_indices = remaining_indices[~in_current_param_mask]
-                    
+
                 remaining_indices -= num_elements
-                
+
                 if remaining_indices.numel() == 0:
                     break
 
@@ -93,33 +97,33 @@ class DEEPR(Optimizer):
         """
         activations = 0
         remaining_indices = candidate_indices
-        
+
         for group in self.param_groups:
             for p in group['params']:
                 if p.grad is None:
                     continue
-                
+
                 p_data_flat = p.data.view(-1)
                 num_elements = p_data_flat.numel()
-                
+
                 in_current_param_mask = remaining_indices < num_elements
                 current_indices = remaining_indices[in_current_param_mask]
-                
+
                 if current_indices.numel() > 0:
                     selected_values = p_data_flat[current_indices]
-                    
+
                     to_activate_mask = selected_values < 0
                     to_activate_indices = current_indices[to_activate_mask]
-                    
+
                     if to_activate_indices.numel() > 0:
                         p_data_flat[to_activate_indices] = group['reset_val']
                         activations += to_activate_indices.numel()
-                
+
                 remaining_indices = remaining_indices[~in_current_param_mask] - num_elements
-                
+
                 if remaining_indices.numel() == 0:
                     break
-        
+
         return activations
 
     def step(self, closure=None):
@@ -136,7 +140,7 @@ class DEEPR(Optimizer):
             l1 = group['l1']
             temp = group['temp']
             sqrt_temp = (2 * lr * temp) ** 0.5
-           
+
             for p in group['params']:
                 if p.grad is None:
                     continue
@@ -152,8 +156,10 @@ class DEEPR(Optimizer):
         # look how many connections are inactive and activate if necessary.
         diff = self.nc - active_connections
         while diff > 0:
-            candidate_indices = torch.randint(low=0, high=self.n_parameters, size=(diff,))
-            candidate_indices = candidate_indices.to(self.param_groups[0]['params'][0].device)
+            candidate_indices = torch.randint(
+                low=0, high=self.n_parameters, size=(diff,))
+            candidate_indices = candidate_indices.to(
+                self.param_groups[0]['params'][0].device)
             diff -= self.attempt_activation(candidate_indices)
 
         return loss
@@ -163,6 +169,7 @@ class SoftDEEPR(Optimizer):
     """
     Deep-rewiring oftimizer with soft constraint on number of connections
     """
+
     def __init__(self, params, lr=0.05, l1=1e-5, temp=None, min_weight=None):
         if lr < 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")
@@ -189,7 +196,7 @@ class SoftDEEPR(Optimizer):
             temp = group['temp']
             min_weight = group['min_weight']
             sqrt_temp = (2 * lr * temp) ** 0.5
-           
+
             for p in group['params']:
                 if p.grad is None:
                     continue
@@ -197,7 +204,7 @@ class SoftDEEPR(Optimizer):
                 noise = sqrt_temp * torch.randn_like(p.data)
 
                 mask = p.data >= 0
-               
+
                 """
                 p.data += mask.float() * (-lr * (grad + l1) + noise)
                 p.data += (~mask).float() * noise.clamp(min=min_weight)
@@ -207,6 +214,7 @@ class SoftDEEPR(Optimizer):
                 p.data += noise - mask.float() * lr * (grad + l1)
                 p.data = p.data.clamp(min=min_weight)
         return loss
+
 
 if __name__ == '__main__':
     pass

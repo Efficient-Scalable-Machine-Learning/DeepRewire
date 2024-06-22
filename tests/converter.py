@@ -1,15 +1,11 @@
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-import torch
-import copy
-from torch import nn
-from deep_rewire import convert, reconvert
-from deep_rewire.convert import NonTrainableParameter
-from deep_rewire.utils import measure_sparsity
-from models import FCN, CNN
 import pytest
+from tests.models import FCN, CNN
+from deep_rewire.utils import measure_sparsity
+from deep_rewire.convert import NonTrainableParameter
+from deep_rewire import convert, reconvert
+from torch import nn
+import copy
+import torch
 
 
 def test_non_trainable_parameter():
@@ -26,6 +22,7 @@ def test_non_trainable_parameter():
     # Try setting requires_grad to False and assert it is still False
     param.requires_grad = False
     assert param.requires_grad == False, "NonTrainableParameter should keep requires_grad set to False"
+
 
 @pytest.mark.parametrize("model_class", [FCN, CNN])
 @pytest.mark.parametrize("handle_biases", ['ignore', 'as_connections', 'second_bias'])
@@ -95,6 +92,7 @@ def test_conversion(model_class, handle_biases):
             out_post_conversion = model(inpt)
         assert torch.equal(out_pre_conversion, out_post_conversion)
 
+
 @pytest.mark.parametrize("model_class", [FCN, CNN])
 @pytest.mark.parametrize("handle_biases", ['ignore', 'as_connections', 'second_bias'])
 def test_active_probability(model_class, handle_biases):
@@ -104,7 +102,8 @@ def test_active_probability(model_class, handle_biases):
         for i in range(10):
             with torch.no_grad():
                 model = model_class()
-                convert(model, handle_biases=handle_biases, active_probability=connectivity)
+                convert(model, handle_biases=handle_biases,
+                        active_probability=connectivity)
                 reconvert(model)
                 sparsities.append(measure_sparsity(model.parameters()))
         sparsity = sum(sparsities)/len(sparsities)

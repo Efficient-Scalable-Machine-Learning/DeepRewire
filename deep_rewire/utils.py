@@ -4,6 +4,7 @@ provides some useful functions
 
 import torch
 
+
 def measure_sparsity(parameters, threshold=0):
     """
     Measures sparsity of a list of tensors or a tensor given a threshold.
@@ -16,7 +17,8 @@ def measure_sparsity(parameters, threshold=0):
     if isinstance(parameters, torch.nn.Module):
         if any('_signs' in n for n, _ in parameters.named_parameters()):
             rewireable = True
-        parameters = [p for n, p in parameters.named_parameters() if all(x not in n for x in ['_signs', '_negative'])]
+        parameters = [p for n, p in parameters.named_parameters() if all(
+            x not in n for x in ['_signs', '_negative'])]
 
     total = 0
     zeros = 0

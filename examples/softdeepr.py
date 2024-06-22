@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 import os
 
+
 class FCNN(nn.Module):
     def __init__(self):
         super(FCNN, self).__init__()
@@ -16,13 +17,14 @@ class FCNN(nn.Module):
         self.fc2 = nn.Linear(300, 100)
         self.fc3 = nn.Linear(100, 10)
         self.relu = nn.ReLU()
-        
+
     def forward(self, x):
         x = x.view(-1, 28 * 28)
         x = self.relu(self.fc1(x))
         x = self.relu(self.fc2(x))
         x = self.fc3(x)
         return x
+
 
 if __name__ == '__main__':
 
@@ -31,19 +33,25 @@ if __name__ == '__main__':
         transforms.Normalize((0.5,), (0.5,))
     ])
 
-    train_dataset = torchvision.datasets.MNIST(root='./data', train=True, download=True, transform=transform)
-    test_dataset = torchvision.datasets.MNIST(root='./data', train=False, download=True, transform=transform)
+    train_dataset = torchvision.datasets.MNIST(
+        root='./data', train=True, download=True, transform=transform)
+    test_dataset = torchvision.datasets.MNIST(
+        root='./data', train=False, download=True, transform=transform)
 
     train_size = int(0.8 * len(train_dataset))
     val_size = len(train_dataset) - train_size
-    train_dataset, val_dataset = torch.utils.data.random_split(train_dataset, [train_size, val_size])
+    train_dataset, val_dataset = torch.utils.data.random_split(
+        train_dataset, [train_size, val_size])
 
-    train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=64, shuffle=True)
-    val_loader = torch.utils.data.DataLoader(dataset=val_dataset, batch_size=1000, shuffle=False)
-    test_loader = torch.utils.data.DataLoader(dataset=test_dataset, batch_size=1000, shuffle=False)
+    train_loader = torch.utils.data.DataLoader(
+        dataset=train_dataset, batch_size=64, shuffle=True)
+    val_loader = torch.utils.data.DataLoader(
+        dataset=val_dataset, batch_size=1000, shuffle=False)
+    test_loader = torch.utils.data.DataLoader(
+        dataset=test_dataset, batch_size=1000, shuffle=False)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    
+
     model = FCNN()
     model.to(device)
 
@@ -92,7 +100,8 @@ if __name__ == '__main__':
         with torch.no_grad():
             sparsities.append(measure_sparsity(model)*100)
 
-        print(f'Epoch [{epoch + 1}/{num_epochs}], Train Loss: {train_losses[-1]:.4f}, Val Accuracy: {val_accuracies[-1]:.2f}%, Sparsity: {sparsities[-1]:.2f}%')
+        print(f'Epoch [{epoch + 1}/{num_epochs}], Train Loss: {train_losses[-1]
+              :.4f}, Val Accuracy: {val_accuracies[-1]:.2f}%, Sparsity: {sparsities[-1]:.2f}%')
 
     reconvert(model)
     sparsity = measure_sparsity(model.parameters())
