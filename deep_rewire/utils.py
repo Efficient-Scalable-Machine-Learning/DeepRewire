@@ -26,7 +26,7 @@ def measure_sparsity(parameters, threshold=0):
         if threshold:
             zeros += (p.abs() < threshold).float().sum()
         elif rewireable:
-            zeros += (p < 0).float().sum()
+            zeros += (p <= 0).float().sum()
         else:
             zeros += (p == 0).float().sum()
         total += p.numel()
