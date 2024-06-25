@@ -27,7 +27,7 @@ class DEEPR(Optimizer):
         self.nc = nc
 
         defaults = dict(lr=lr, l1=l1, temp=temp, reset_val=reset_val)
-        super(DEEPR, self).__init__(params, defaults)
+        super(DEEPR, self).__init__(params, defaults) 
 
         # count parameters
         self.n_parameters = 0

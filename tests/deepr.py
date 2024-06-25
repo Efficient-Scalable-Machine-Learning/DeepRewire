@@ -26,13 +26,12 @@ def test_number_of_connections_init():
     model = FCN()
     param_total = sum(p.numel() for p in model.parameters())
     nc = int(param_total * 0.3)
-    convert(model)
+    sparse_params, _ = convert(model, handle_biases='as_connections')
     sample_input = torch.randn(1, *model.input_shape)
     sample_output = torch.randn(1, *model.output_shape)
     criterion = torch.nn.MSELoss()
-    optimizer = DEEPR(model.parameters(), nc=nc, lr=0.05, l1=0.005)
+    optimizer = DEEPR(sparse_params, nc=nc, lr=0.05, l1=0.005)
     verify_number_of_connections(optimizer)
-
     reconvert(model)
     assert sum(torch.count_nonzero(p) for p in model.parameters()) <= nc
 
@@ -41,12 +40,12 @@ def test_number_of_connections_step():
     model = FCN()
     param_total = sum(p.numel() for p in model.parameters())
     nc = int(param_total * 0.3)
-    convert(model)
+    sparse_params, _ = convert(model, handle_biases='as_connections')
     model.to(device)
     sample_input = torch.randn(1, *model.input_shape).to(device)
     sample_output = torch.randn(1, *model.output_shape).to(device)
     criterion = torch.nn.MSELoss()
-    optimizer = DEEPR(model.parameters(), nc=nc, lr=0.05, l1=0.005)
+    optimizer = DEEPR(sparse_params, nc=nc, lr=0.05, l1=0.005)
 
     output = model(sample_input)
     loss = criterion(output, sample_output)

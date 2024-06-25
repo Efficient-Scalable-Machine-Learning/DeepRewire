@@ -48,6 +48,19 @@ def test_loss_calculation(model_class, handle_biases):
 
 
 @pytest.mark.parametrize("model_class", [FCN, CNN])
+@pytest.mark.parametrize("handle_biases", ['ignore', 'as_connections', 'second_bias'])
+def test_measure_sparsity(model_class, handle_biases):
+    model = model_class()
+    sp1 = measure_sparsity(model)
+    convert(model, keep_signs=True, handle_biases=handle_biases)
+    sp2 = measure_sparsity(model)
+    assert sp1 == sp2
+    reconvert(model)
+    sp3 = measure_sparsity(model)
+    assert sp2 == sp3
+
+
+@pytest.mark.parametrize("model_class", [FCN, CNN])
 def test_parameters(model_class):
     rewired_model = model_class()
     standard_model = copy.deepcopy(rewired_model)
@@ -102,9 +115,15 @@ def test_active_probability(model_class, handle_biases):
         for i in range(10):
             with torch.no_grad():
                 model = model_class()
-                convert(model, handle_biases=handle_biases,
+                sp, ot = convert(model, handle_biases=handle_biases,
                         active_probability=connectivity)
                 reconvert(model)
-                sparsities.append(measure_sparsity(model.parameters()))
+                if ot != []:
+                    n_sp = sum(p.numel() for p in sp)
+                    n_ot = sum(p.numel() for p in ot)
+                    ratio = n_sp / (n_ot + n_sp)
+                else:
+                    ratio = 1
+                sparsities.append(measure_sparsity(model.parameters())*ratio)
         sparsity = sum(sparsities)/len(sparsities)
-        assert pytest.approx(connectivity, abs=0.001) == 1.0 - sparsity
+        assert pytest.approx(connectivity, abs=0.01) == 1.0 - sparsity

@@ -4,6 +4,11 @@ provides some useful functions
 
 import torch
 
+def check_any_parameter_in_network(model, parameter_name):
+    for name, param in model.named_parameters():
+        if name == parameter_name:
+            return True
+    return False
 
 def measure_sparsity(parameters, threshold=0):
     """
@@ -13,21 +18,30 @@ def measure_sparsity(parameters, threshold=0):
     if isinstance(parameters, torch.Tensor):
         parameters = [parameters]
 
-    rewireable = False
+    sparse_parameters = []
     if isinstance(parameters, torch.nn.Module):
-        if any('_signs' in n for n, _ in parameters.named_parameters()):
-            rewireable = True
-        parameters = [p for n, p in parameters.named_parameters() if all(
-            x not in n for x in ['_signs', '_negative'])]
+        module = parameters
+        sparse_parameters = []
+        parameters = []
+        for name, p in module.named_parameters():
+            if '_signs' in name or '_negative' in name:
+                continue
+            elif check_any_parameter_in_network(module, name + '_signs'):
+                sparse_parameters.append(p)
+            else:
+                parameters.append(p)
 
     total = 0
     zeros = 0
     for p in parameters:
         if threshold:
             zeros += (p.abs() < threshold).float().sum()
-        elif rewireable:
-            zeros += (p <= 0).float().sum()
         else:
             zeros += (p == 0).float().sum()
         total += p.numel()
+    
+    for p in sparse_parameters:
+        zeros += (p <= 0).float().sum()
+        total += p.numel()
+        
     return float(zeros/total)
