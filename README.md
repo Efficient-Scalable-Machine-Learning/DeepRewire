@@ -102,6 +102,23 @@ The `SoftDEEPR` algorithm has no fixed amount of connections, but also adds nois
 
 - `min_weight` (float): Minimum value for inactive parameters.
 
+#### SoftDEEPRWrapper
+```python
+deep_rewire.SoftDEEPRWrapper(params, base_optim, l1=1e-5, temp=None, min_weight=None, **optim_kwargs)
+```
+
+Uses the `SoftDEEPR` algorithm regarding keeping the connections sparse but updates the parameters using any chosen torch optimizer (SGD, Adam..).
+
+- `base_optim` (torch.optim.Optimizer): The basic optimizer to use for updating the parameters
+
+- `l1` (float): L1 regularization term.
+
+- `temp` (float): Temperature affecting noise magnitude.
+
+- `min_weight` (float): Minimum value for inactive parameters.
+
+- `**optim_kwargs`: Arguments for the base optimizer 
+
 ## Contributing
 Contributions are welcome! Please open an issue or submit a pull request for any improvements and fix my mistakes :).
 
