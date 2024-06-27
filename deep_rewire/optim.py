@@ -216,5 +216,56 @@ class SoftDEEPR(Optimizer):
         return loss
 
 
+class SoftDEEPRWrapper(Optimizer):
+    """
+    Deep-rewiring oftimizer with soft constraint on number of connections
+    """
+
+    def __init__(self, params, base_optim_class, l1=1e-5, temp=None, min_weight=None, **optim_kwargs):
+        params = list(params)
+        self.base_optim = base_optim_class(params, **optim_kwargs)
+        lr = optim_kwargs.get('lr', 0.005)
+        if lr < 0.0:
+            raise ValueError(f"Invalid learning rate: {lr}") 
+        if l1 < 0.0:
+            raise ValueError(f"Invalid L1 regularization term: {l1}")
+        if temp is None:
+            temp = lr * l1**2 / 18
+        if min_weight is None:
+            min_weight = -3*l1
+
+        defaults = dict(lr=lr, l1=l1, temp=temp, min_weight=min_weight)
+        super(SoftDEEPRWrapper, self).__init__(params, defaults)
+
+    def step(self, closure=None):
+        """Performs a single optimization step."""
+        for group in self.param_groups:
+            lr = group['lr']
+            l1 = group['l1']
+            temp = group['temp']
+            sqrt_temp = (2 * lr * temp) ** 0.5
+
+            for p in group['params']: 
+                if p.grad is None:
+                    continue
+                
+                noise = sqrt_temp * torch.randn_like(p.data)
+                mask = p.data >= 0
+                p.grad.data *= mask.float()
+                p.data += noise - mask.float() * lr * l1
+
+        loss = self.base_optim.step(closure=closure)
+
+        for group in self.param_groups:
+            min_weight = group['min_weight']
+            for p in group['params']: 
+                if p.grad is None:
+                    continue
+                
+                p.data = p.data.clamp(min=min_weight)
+ 
+        return loss
+
+
 if __name__ == '__main__':
     pass
