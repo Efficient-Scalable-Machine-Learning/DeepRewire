@@ -1,3 +1,3 @@
-__version__ = '1.0.3'
-from .optim import DEEPR, SoftDEEPR
+__version__ = '1.0.5'
+from .optim import DEEPR, SoftDEEPR, SoftDEEPRWrapper
 from .convert import convert, reconvert
