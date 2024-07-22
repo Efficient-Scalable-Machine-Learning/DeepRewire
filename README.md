@@ -59,7 +59,7 @@ Converts a PyTorch module into a rewireable form.
     - `module` (nn.Module): The model to convert.
     - `handle_biases` (str): Strategy to handle biases. Options are 'ignore', 'as_connections', and 'second_bias'.
     - `active_probability` (float): Probability for connections to be active right after conversion.
-    - `keep_signs` (bool): Retain initial network signs and start with all connections active (for pretrained networks).
+    - `keep_signs` (bool): Keep initial network signs and start with all connections active (for pretrained networks).
 
  #### reconvert
 
